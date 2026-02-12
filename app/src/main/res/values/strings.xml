@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">memoREELS</string>
+    <string name="feed">Feed</string>
+    <string name="favorites">Favorites</string>
+    <string name="search">Search</string>
+    <string name="settings">Settings</string>
+    <string name="no_videos">No videos found. Add some memories!</string>
+    <string name="permission_required">Grant access to view your local videos</string>
+    <string name="permission_rationale">To access your local videos for playback and rediscover memories</string>
+</resources>
