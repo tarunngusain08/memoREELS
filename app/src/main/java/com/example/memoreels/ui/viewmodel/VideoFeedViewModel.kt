@@ -145,13 +145,26 @@ class VideoFeedViewModel @Inject constructor(
         loadUnifiedFeed()
     }
 
-    /** Loads photos + videos and builds the unified feed. */
+    /** Loads photos + videos and builds the unified feed with tag-based grouping. */
     private fun loadUnifiedFeed() {
         viewModelScope.launch {
             try {
                 val photos = photoDataSource.loadPhotos()
                 val videoList = loadAllVideos()
-                _unifiedFeed.value = feedItemFactory.buildUnifiedFeed(videoList, photos)
+
+                // Build tag map for relevance-based photo grouping
+                val allTags = withContext(Dispatchers.IO) { videoTagDao.getAllTags() }
+                val photoTags = mutableMapOf<String, MutableList<String>>()
+                allTags.forEach { tagEntity ->
+                    if (tagEntity.videoUri.contains("/images/")) {
+                        photoTags.getOrPut(tagEntity.videoUri) { mutableListOf() }
+                            .add(tagEntity.tag)
+                    }
+                }
+
+                _unifiedFeed.value = feedItemFactory.buildUnifiedFeed(
+                    videoList, photos, photoTags
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load unified feed", e)
             }

@@ -35,7 +35,8 @@ import com.example.memoreels.ui.viewmodel.PhotoFeedViewModel
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PhotoFeedScreen(
-    viewModel: PhotoFeedViewModel = hiltViewModel()
+    viewModel: PhotoFeedViewModel = hiltViewModel(),
+    onPhotoClick: (String) -> Unit = {}
 ) {
     val photoGroups by viewModel.photoGroups.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -104,7 +105,8 @@ fun PhotoFeedScreen(
                 ) {
                     PhotoDisplay(
                         group = group,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        onPhotoClick = onPhotoClick
                     )
                 }
             }

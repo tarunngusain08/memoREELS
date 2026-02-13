@@ -1,6 +1,9 @@
 package com.example.memoreels.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -26,9 +28,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.clickable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,6 +56,18 @@ fun JournalScreen(
 ) {
     val dayGroups by viewModel.dayGroups.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    // Lifted editing state for auto-save across day entries
+    var editingDate by remember { mutableStateOf<String?>(null) }
+    // Map of date -> current note text being edited
+    var editingNoteTexts by remember { mutableStateOf(mapOf<String, String>()) }
+    // Pinch-to-zoom scale for thumbnails
+    var thumbnailScale by remember { mutableFloatStateOf(1f) }
+    val transformState = rememberTransformableState { zoomChange, _, _ ->
+        thumbnailScale = (thumbnailScale * zoomChange).coerceIn(0.5f, 2f)
+    }
+
+    val thumbnailSize: Dp = (72.dp * thumbnailScale).coerceIn(36.dp, 144.dp)
 
     Column(
         modifier = Modifier
@@ -82,13 +97,47 @@ fun JournalScreen(
             }
             else -> {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .transformable(state = transformState),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     items(dayGroups, key = { it.date }) { group ->
                         DayEntry(
                             group = group,
-                            onSaveNote = { note -> viewModel.saveNote(group.date, note) },
+                            isEditing = editingDate == group.date,
+                            noteText = editingNoteTexts[group.date]
+                                ?: group.note ?: "",
+                            thumbnailSize = thumbnailSize,
+                            onStartEditing = {
+                                // Auto-save previous day's note before switching
+                                val prevDate = editingDate
+                                if (prevDate != null && prevDate != group.date) {
+                                    val prevNote = editingNoteTexts[prevDate] ?: ""
+                                    if (prevNote.isNotBlank()) {
+                                        viewModel.saveNote(prevDate, prevNote)
+                                    }
+                                }
+                                editingDate = group.date
+                                if (!editingNoteTexts.containsKey(group.date)) {
+                                    editingNoteTexts = editingNoteTexts +
+                                        (group.date to (group.note ?: ""))
+                                }
+                            },
+                            onNoteChanged = { newText ->
+                                editingNoteTexts = editingNoteTexts +
+                                    (group.date to newText)
+                            },
+                            onSaveNote = { note ->
+                                viewModel.saveNote(group.date, note)
+                                editingDate = null
+                                editingNoteTexts = editingNoteTexts - group.date
+                            },
+                            onCancelEdit = {
+                                editingDate = null
+                                editingNoteTexts = editingNoteTexts - group.date
+                            },
                             onMediaClick = onMediaClick
                         )
                     }
@@ -101,12 +150,15 @@ fun JournalScreen(
 @Composable
 private fun DayEntry(
     group: DayGroup,
+    isEditing: Boolean,
+    noteText: String,
+    thumbnailSize: Dp,
+    onStartEditing: () -> Unit,
+    onNoteChanged: (String) -> Unit,
     onSaveNote: (String) -> Unit,
+    onCancelEdit: () -> Unit,
     onMediaClick: (String) -> Unit
 ) {
-    var isEditing by remember { mutableStateOf(false) }
-    var noteText by remember(group.note) { mutableStateOf(group.note ?: "") }
-
     Column {
         // Date header
         Row(
@@ -129,13 +181,14 @@ private fun DayEntry(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Photo strip
+        // Photo strip with clickable thumbnails and pinch-to-zoom sizing
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items(group.photos) { photo ->
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(thumbnailSize)
                         .clip(RoundedCornerShape(8.dp))
+                        .clickable { onMediaClick(photo.uri) }
                 ) {
                     MediaThumbnail(
                         contentUri = photo.uri,
@@ -151,7 +204,7 @@ private fun DayEntry(
         if (isEditing) {
             OutlinedTextField(
                 value = noteText,
-                onValueChange = { noteText = it },
+                onValueChange = onNoteChanged,
                 placeholder = { Text("Write about this day...", color = Color.White.copy(alpha = 0.3f)) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
@@ -173,10 +226,7 @@ private fun DayEntry(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .clickable {
-                            onSaveNote(noteText)
-                            isEditing = false
-                        }
+                        .clickable { onSaveNote(noteText) }
                         .padding(4.dp)
                 )
                 Text(
@@ -185,7 +235,7 @@ private fun DayEntry(
                     fontSize = 13.sp,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .clickable { isEditing = false }
+                        .clickable { onCancelEdit() }
                         .padding(4.dp)
                 )
             }
@@ -205,7 +255,7 @@ private fun DayEntry(
                     fontStyle = FontStyle.Italic,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { isEditing = true }, modifier = Modifier.size(20.dp)) {
+                IconButton(onClick = onStartEditing, modifier = Modifier.size(20.dp)) {
                     Icon(Icons.Default.Edit, "Edit", tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                 }
             }
@@ -216,7 +266,7 @@ private fun DayEntry(
                 fontSize = 13.sp,
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .clickable { isEditing = true }
+                    .clickable { onStartEditing() }
                     .padding(vertical = 4.dp)
             )
         }

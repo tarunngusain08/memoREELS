@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,21 +20,37 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,10 +68,12 @@ import com.example.memoreels.data.model.TimeCapsuleEntity
 import com.example.memoreels.ui.components.MediaThumbnail
 import com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimeCapsuleScreen(
     viewModel: TimeCapsuleViewModel = hiltViewModel(),
@@ -62,69 +81,283 @@ fun TimeCapsuleScreen(
     onMediaClick: (String) -> Unit = {}
 ) {
     val capsules by viewModel.capsules.collectAsState()
+    val taggedUris by viewModel.taggedMediaUris.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
     ) {
-        // Top bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
+                }
+                Text(
+                    text = "Time Capsules",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
-            Text(
-                text = "Time Capsules",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+
+            if (capsules.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.3f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "No time capsules yet.\nSeal your memories for the future!",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { showCreateDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE53935)
+                            )
+                        ) {
+                            Icon(Icons.Default.Add, "Create", modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Create Your First Capsule")
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(capsules, key = { it.id }) { capsule ->
+                        TimeCapsuleCard(
+                            capsule = capsule,
+                            onReveal = { viewModel.openCapsule(capsule.id) },
+                            onDelete = { viewModel.deleteCapsule(capsule.id) },
+                            onMediaClick = onMediaClick
+                        )
+                    }
+                }
+            }
         }
 
-        if (capsules.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+        // FAB for creating capsules
+        FloatingActionButton(
+            onClick = { showCreateDialog = true },
+            containerColor = Color(0xFFE53935),
+            contentColor = Color.White,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+        ) {
+            Icon(Icons.Default.Add, "Create Capsule")
+        }
+    }
+
+    // Create Capsule Dialog
+    if (showCreateDialog) {
+        CreateCapsuleDialog(
+            availableUris = taggedUris,
+            onDismiss = { showCreateDialog = false },
+            onConfirm = { title, uris, unlockDate ->
+                viewModel.createCapsule(title, uris, unlockDate)
+                showCreateDialog = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreateCapsuleDialog(
+    availableUris: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (String, List<String>, Long) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    val selectedUris = remember { mutableStateListOf<String>() }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val tomorrow = remember {
+        Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }.timeInMillis
+    }
+    var unlockDate by remember { mutableStateOf(tomorrow) }
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1A1A1A),
+        title = {
+            Text("Create Time Capsule", color = Color.White, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = { Text("Capsule name...", color = Color.White.copy(alpha = 0.3f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFFE53935),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Unlock date selector
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.05f))
+                        .clickable { showDatePicker = true }
+                        .padding(12.dp)
+                ) {
                     Text(
-                        text = "No time capsules yet.\nSeal your memories for the future!",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center
+                        text = "Unlock: ${dateFormat.format(Date(unlockDate))}",
+                        color = Color.White,
+                        fontSize = 14.sp
                     )
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Select memories (${selectedUris.size} selected)",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Media picker grid
+                if (availableUris.isEmpty()) {
+                    Text(
+                        text = "No processed media yet.\nTag media from the feed first.",
+                        color = Color.White.copy(alpha = 0.3f),
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.height(200.dp)
+                    ) {
+                        items(availableUris) { uri ->
+                            val isSelected = selectedUris.contains(uri)
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = if (isSelected) Color(0xFFE53935) else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        if (isSelected) selectedUris.remove(uri)
+                                        else selectedUris.add(uri)
+                                    }
+                            ) {
+                                MediaThumbnail(
+                                    contentUri = uri,
+                                    contentDescription = "Media"
+                                )
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .size(18.dp)
+                                            .background(Color(0xFFE53935), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            "Selected",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (title.isNotBlank() && selectedUris.isNotEmpty()) {
+                        onConfirm(title, selectedUris.toList(), unlockDate)
+                    }
+                },
+                enabled = title.isNotBlank() && selectedUris.isNotEmpty()
             ) {
-                items(capsules, key = { it.id }) { capsule ->
-                    TimeCapsuleCard(
-                        capsule = capsule,
-                        onReveal = { viewModel.openCapsule(capsule.id) },
-                        onDelete = { viewModel.deleteCapsule(capsule.id) },
-                        onMediaClick = onMediaClick
-                    )
+                Text("Seal Capsule", color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.White.copy(alpha = 0.5f))
+            }
+        }
+    )
+
+    // Date picker
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = unlockDate)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { unlockDate = it }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
                 }
             }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

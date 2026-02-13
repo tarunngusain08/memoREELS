@@ -12,9 +12,9 @@ import kotlin.random.Random
  * Builds a unified feed by interleaving videos and photo groups.
  *
  * The algorithm:
- * 1. Shuffles both lists independently.
- * 2. Picks from each list alternately, with a bias toward videos (~60-70%).
- * 3. Groups consecutive photo picks (1-4) into a PhotoGroup with a random display mode.
+ * 1. Groups photos by shared ML tags for relevance.
+ * 2. Shuffles video order.
+ * 3. Interleaves video items with tag-grouped photo batches.
  * 4. Assigns display modes with weighted random distribution.
  */
 @Singleton
@@ -38,88 +38,157 @@ class FeedItemFactory @Inject constructor() {
     }
 
     /**
-     * Creates a unified feed from videos and photos.
-     * Videos and photos are shuffled, then interleaved with groups of 1-4 photos
-     * scattered between video items.
+     * Groups photos by shared ML tags for relevance-based stacking.
+     * Photos with common tags are grouped together, sorted by dateAdded within groups.
+     * Untagged photos fall back to date-based grouping.
+     *
+     * @param photos All available photos
+     * @param photoTags Map of photoUri -> list of tag names
+     * @return Ordered list of photo groups (each 1-4 photos)
      */
-    fun buildUnifiedFeed(videos: List<Video>, photos: List<Photo>): List<FeedItem> {
+    private fun groupPhotosByRelevance(
+        photos: List<Photo>,
+        photoTags: Map<String, List<String>>
+    ): List<List<Photo>> {
+        if (photos.isEmpty()) return emptyList()
+
+        // Build reverse index: tag -> set of photo URIs
+        val tagToUris = mutableMapOf<String, MutableSet<String>>()
+        photoTags.forEach { (uri, tags) ->
+            tags.forEach { tag ->
+                tagToUris.getOrPut(tag) { mutableSetOf() }.add(uri)
+            }
+        }
+
+        val photoByUri = photos.associateBy { it.uri }
+        val usedUris = mutableSetOf<String>()
+        val groups = mutableListOf<List<Photo>>()
+
+        // Sort tags by frequency (most shared first) for better grouping
+        val sortedTags = tagToUris.entries
+            .filter { it.value.size > 1 } // only tags shared by multiple photos
+            .sortedByDescending { it.value.size }
+
+        // Group photos by shared tags
+        for ((_, uris) in sortedTags) {
+            val availablePhotos = uris
+                .filter { it !in usedUris && photoByUri.containsKey(it) }
+                .mapNotNull { photoByUri[it] }
+                .sortedBy { it.dateAdded } // temporal coherence within group
+
+            if (availablePhotos.size < 2) continue
+
+            // Chunk into groups of 2-4
+            availablePhotos.chunked(4).forEach { chunk ->
+                if (chunk.isNotEmpty()) {
+                    groups.add(chunk)
+                    chunk.forEach { usedUris.add(it.uri) }
+                }
+            }
+        }
+
+        // Remaining untagged or single-tag photos: group by date proximity
+        val remaining = photos.filter { it.uri !in usedUris }.sortedBy { it.dateAdded }
+        remaining.chunked(Random.nextInt(1, 5).coerceAtLeast(1)).forEach { chunk ->
+            if (chunk.isNotEmpty()) {
+                groups.add(chunk)
+            }
+        }
+
+        return groups.shuffled()
+    }
+
+    /**
+     * Creates a unified feed from videos and photos.
+     * Photos are grouped by shared ML tags for relevance-based stacking,
+     * then interleaved with shuffled videos.
+     *
+     * @param photoTags Optional map of photoUri -> list of tag names for relevance grouping
+     */
+    fun buildUnifiedFeed(
+        videos: List<Video>,
+        photos: List<Photo>,
+        photoTags: Map<String, List<String>> = emptyMap()
+    ): List<FeedItem> {
         if (videos.isEmpty() && photos.isEmpty()) return emptyList()
 
         val shuffledVideos = videos.shuffled().toMutableList()
-        val shuffledPhotos = photos.shuffled().toMutableList()
-        val feed = mutableListOf<FeedItem>()
 
-        // Interleave: after every 2-4 videos, insert a photo group
-        var videoInsertCount = 0
-        val nextPhotoInterval = { Random.nextInt(2, 5) } // insert photos every 2-4 videos
+        // Group photos by relevance if tags are available, else fall back to random
+        val photoGroups = if (photoTags.isNotEmpty()) {
+            groupPhotosByRelevance(photos, photoTags).toMutableList()
+        } else {
+            // Fallback: random grouping
+            val shuffled = photos.shuffled().toMutableList()
+            val groups = mutableListOf<List<Photo>>()
+            while (shuffled.isNotEmpty()) {
+                val sz = Random.nextInt(1, 5).coerceAtMost(shuffled.size).coerceAtLeast(1)
+                groups.add((1..sz).map { shuffled.removeFirst() })
+            }
+            groups.toMutableList()
+        }
+
+        val feed = mutableListOf<FeedItem>()
+        val nextPhotoInterval = { Random.nextInt(2, 5) }
         var countdown = nextPhotoInterval()
 
-        while (shuffledVideos.isNotEmpty() || shuffledPhotos.isNotEmpty()) {
-            // Add a video if available and we haven't hit the photo interval
-            if (shuffledVideos.isNotEmpty() && (countdown > 0 || shuffledPhotos.isEmpty())) {
+        while (shuffledVideos.isNotEmpty() || photoGroups.isNotEmpty()) {
+            if (shuffledVideos.isNotEmpty() && (countdown > 0 || photoGroups.isEmpty())) {
                 feed.add(FeedItem.VideoItem(shuffledVideos.removeFirst()))
-                videoInsertCount++
                 countdown--
             }
 
-            // Time to insert a photo group
-            if (countdown <= 0 && shuffledPhotos.isNotEmpty()) {
-                val groupSize = Random.nextInt(1, 5)
-                    .coerceAtMost(shuffledPhotos.size)
-                    .coerceAtLeast(1)
-                if (groupSize > 0 && shuffledPhotos.size >= groupSize) {
-                    val photoGroup = (1..groupSize).map { shuffledPhotos.removeFirst() }
-                    feed.add(
-                        FeedItem.PhotoGroup(
-                            photos = photoGroup,
-                            displayMode = randomDisplayMode(groupSize)
-                        )
+            if (countdown <= 0 && photoGroups.isNotEmpty()) {
+                val group = photoGroups.removeFirst()
+                feed.add(
+                    FeedItem.PhotoGroup(
+                        photos = group,
+                        displayMode = randomDisplayMode(group.size)
                     )
-                }
+                )
                 countdown = nextPhotoInterval()
             }
 
-            // If only photos remain, drain them in groups
-            if (shuffledVideos.isEmpty() && shuffledPhotos.isNotEmpty()) {
-                val groupSize = Random.nextInt(1, 5)
-                    .coerceAtMost(shuffledPhotos.size)
-                    .coerceAtLeast(1)
-                if (shuffledPhotos.size >= groupSize) {
-                    val photoGroup = (1..groupSize).map { shuffledPhotos.removeFirst() }
-                    feed.add(
-                        FeedItem.PhotoGroup(
-                            photos = photoGroup,
-                            displayMode = randomDisplayMode(groupSize)
-                        )
+            if (shuffledVideos.isEmpty() && photoGroups.isNotEmpty()) {
+                val group = photoGroups.removeFirst()
+                feed.add(
+                    FeedItem.PhotoGroup(
+                        photos = group,
+                        displayMode = randomDisplayMode(group.size)
                     )
-                }
+                )
             }
 
-            // Safety: break if neither list made progress to prevent infinite loop
-            if (shuffledVideos.isEmpty() && shuffledPhotos.isEmpty()) break
+            if (shuffledVideos.isEmpty() && photoGroups.isEmpty()) break
         }
 
         return feed
     }
 
-    /** Creates a photo-only feed (for separate mode). */
-    fun buildPhotoFeed(photos: List<Photo>): List<FeedItem.PhotoGroup> {
+    /** Creates a photo-only feed (for separate mode) with tag-based grouping. */
+    fun buildPhotoFeed(
+        photos: List<Photo>,
+        photoTags: Map<String, List<String>> = emptyMap()
+    ): List<FeedItem.PhotoGroup> {
         if (photos.isEmpty()) return emptyList()
 
-        val shuffled = photos.shuffled().toMutableList()
-        val groups = mutableListOf<FeedItem.PhotoGroup>()
-
-        while (shuffled.isNotEmpty()) {
-            val groupSize = Random.nextInt(1, 5).coerceAtMost(shuffled.size)
-            val photoGroup = (1..groupSize).map { shuffled.removeFirst() }
-            groups.add(
-                FeedItem.PhotoGroup(
-                    photos = photoGroup,
-                    displayMode = randomDisplayMode(groupSize)
-                )
-            )
+        val photoGroups = if (photoTags.isNotEmpty()) {
+            groupPhotosByRelevance(photos, photoTags)
+        } else {
+            val shuffled = photos.shuffled().toMutableList()
+            val groups = mutableListOf<List<Photo>>()
+            while (shuffled.isNotEmpty()) {
+                val sz = Random.nextInt(1, 5).coerceAtMost(shuffled.size)
+                groups.add((1..sz).map { shuffled.removeFirst() })
+            }
+            groups
         }
 
-        return groups
+        return photoGroups.map { group ->
+            FeedItem.PhotoGroup(
+                photos = group,
+                displayMode = randomDisplayMode(group.size)
+            )
+        }
     }
 }

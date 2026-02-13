@@ -162,7 +162,6 @@ fun MemoReelsNavHost(
         "timeCapsules", "journal", "moodFeed", "duplicateCleaner",
         "memoryMap", "highlightReels", "peopleAlbums", "nearbySharing"
     )
-    val isPhotoViewer = currentRoute.startsWith("photoViewer/")
     val showBottomBar = currentRoute != Screen.Onboarding.route &&
         !currentRoute.startsWith("player/") &&
         !currentRoute.startsWith("photoViewer/") &&
@@ -235,7 +234,9 @@ fun MemoReelsNavHost(
                 popEnterTransition = { tabEnter },
                 popExitTransition = { tabExit }
             ) {
-                PhotoFeedScreen()
+                PhotoFeedScreen(
+                    onPhotoClick = { uri -> navController.navigateToPhotoViewer(uri) }
+                )
             }
 
             composable(
@@ -247,7 +248,7 @@ fun MemoReelsNavHost(
             ) {
                 FavoritesScreen(
                     onVideoClick = { video ->
-                        navController.navigateToPlayer(video.uri)
+                        navController.navigateToMedia(video.uri)
                     }
                 )
             }
@@ -261,10 +262,10 @@ fun MemoReelsNavHost(
             ) {
                 ExploreScreen(
                     onVideoClick = { video ->
-                        navController.navigateToPlayer(video.uri)
+                        navController.navigateToMedia(video.uri)
                     },
                     onVideoUriClick = { uri ->
-                        navController.navigateToPlayer(uri)
+                        navController.navigateToMedia(uri)
                     },
                     onCollectionClick = { tag ->
                         val encodedTag = android.util.Base64.encodeToString(

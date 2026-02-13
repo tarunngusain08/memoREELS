@@ -58,11 +58,13 @@ import kotlin.math.roundToInt
 
 /**
  * Dispatcher composable that renders a PhotoGroup in its assigned display mode.
+ * @param onPhotoClick Callback when a photo should open full-screen, passing the photo URI.
  */
 @Composable
 fun PhotoDisplay(
     group: FeedItem.PhotoGroup,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPhotoClick: (String) -> Unit = {}
 ) {
     Box(
         modifier = modifier
@@ -73,11 +75,11 @@ fun PhotoDisplay(
         if (group.photos.isEmpty()) return
 
         when (group.displayMode) {
-            PhotoDisplayMode.SINGLE -> SinglePhotoView(group.photos.first())
-            PhotoDisplayMode.STACKED -> StackedPhotosView(group.photos)
-            PhotoDisplayMode.COLLAGE -> CollageView(group.photos)
-            PhotoDisplayMode.STYLIZED -> StylizedPhotoView(group.photos.first())
-            PhotoDisplayMode.MOTION -> MotionPhotoView(group.photos.first())
+            PhotoDisplayMode.SINGLE -> SinglePhotoView(group.photos.first(), onPhotoClick)
+            PhotoDisplayMode.STACKED -> StackedPhotosView(group.photos, onPhotoClick)
+            PhotoDisplayMode.COLLAGE -> CollageView(group.photos, onPhotoClick)
+            PhotoDisplayMode.STYLIZED -> StylizedPhotoView(group.photos.first(), onPhotoClick)
+            PhotoDisplayMode.MOTION -> MotionPhotoView(group.photos.first(), onPhotoClick)
         }
 
         // Photo count indicator for multi-photo groups
@@ -107,7 +109,7 @@ fun PhotoDisplay(
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun SinglePhotoView(photo: Photo) {
+private fun SinglePhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
     val infiniteTransition = rememberInfiniteTransition(label = "kenBurns")
 
     val scale by infiniteTransition.animateFloat(
@@ -138,41 +140,51 @@ private fun SinglePhotoView(photo: Photo) {
         label = "translateY"
     )
 
-    AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(Uri.parse(photo.uri))
-            .crossfade(true)
-            .build(),
-        contentDescription = photo.displayName,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                this.translationX = translateX
-                this.translationY = translateY
-            }
-    )
-
-    // Date overlay at bottom
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
-                    startY = 0.7f
+            .pointerInput(photo.uri) {
+                detectTapGestures(
+                    onDoubleTap = { onPhotoClick(photo.uri) }
                 )
-            ),
-        contentAlignment = Alignment.BottomStart
+            }
     ) {
-        Text(
-            text = photo.formattedDate,
-            color = Color.White.copy(alpha = 0.85f),
-            fontSize = 14.sp,
-            modifier = Modifier.padding(16.dp)
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(Uri.parse(photo.uri))
+                .crossfade(true)
+                .build(),
+            contentDescription = photo.displayName,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.translationX = translateX
+                    this.translationY = translateY
+                }
         )
+
+        // Date overlay at bottom
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
+                        startY = 0.7f
+                    )
+                ),
+            contentAlignment = Alignment.BottomStart
+        ) {
+            Text(
+                text = photo.formattedDate,
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }
 
@@ -181,7 +193,7 @@ private fun SinglePhotoView(photo: Photo) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-fun StackedPhotosView(photos: List<Photo>) {
+fun StackedPhotosView(photos: List<Photo>, onPhotoClick: (String) -> Unit = {}) {
     if (photos.isEmpty()) return
 
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -197,16 +209,20 @@ fun StackedPhotosView(photos: List<Photo>) {
             .fillMaxSize()
             .onSizeChanged { containerWidth = it.width }
             .pointerInput(photos.size) {
-                detectTapGestures { offset ->
-                    val halfWidth = containerWidth / 2f
-                    if (offset.x > halfWidth) {
-                        // Right tap: next
-                        currentIndex = (currentIndex + 1) % photos.size
-                    } else {
-                        // Left tap: previous
-                        currentIndex = (currentIndex - 1 + photos.size) % photos.size
+                detectTapGestures(
+                    onDoubleTap = {
+                        // Double-tap opens the current photo full-screen
+                        onPhotoClick(photos[currentIndex].uri)
+                    },
+                    onTap = { offset ->
+                        val halfWidth = containerWidth / 2f
+                        if (offset.x > halfWidth) {
+                            currentIndex = (currentIndex + 1) % photos.size
+                        } else {
+                            currentIndex = (currentIndex - 1 + photos.size) % photos.size
+                        }
                     }
-                }
+                )
             },
         contentAlignment = Alignment.Center
     ) {
@@ -325,7 +341,7 @@ fun StackedPhotosView(photos: List<Photo>) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun CollageView(photos: List<Photo>) {
+private fun CollageView(photos: List<Photo>, onPhotoClick: (String) -> Unit = {}) {
     if (photos.isEmpty()) return
     val gap = 3.dp
     val cornerRadius = 8.dp
@@ -334,6 +350,11 @@ private fun CollageView(photos: List<Photo>) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(photos.first().uri) {
+                detectTapGestures(
+                    onDoubleTap = { onPhotoClick(photos.first().uri) }
+                )
+            }
             .padding(gap),
         contentAlignment = Alignment.Center
     ) {
@@ -423,11 +444,16 @@ private fun CollageImage(
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun StylizedPhotoView(photo: Photo) {
+private fun StylizedPhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A)),
+            .background(Color(0xFF1A1A1A))
+            .pointerInput(photo.uri) {
+                detectTapGestures(
+                    onDoubleTap = { onPhotoClick(photo.uri) }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         // Polaroid card
@@ -471,7 +497,7 @@ private fun StylizedPhotoView(photo: Photo) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun MotionPhotoView(photo: Photo) {
+private fun MotionPhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
     val infiniteTransition = rememberInfiniteTransition(label = "motion")
 
     val scale by infiniteTransition.animateFloat(
@@ -502,7 +528,15 @@ private fun MotionPhotoView(photo: Photo) {
         label = "motionTy"
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(photo.uri) {
+                detectTapGestures(
+                    onDoubleTap = { onPhotoClick(photo.uri) }
+                )
+            }
+    ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(Uri.parse(photo.uri))
