@@ -76,7 +76,7 @@ public final class VoiceNoteDao_Impl implements VoiceNoteDao {
   }
 
   @Override
-  public Object insert(final VoiceNoteEntity note, final Continuation<? super Long> $completion) {
+  public Object insert(final VoiceNoteEntity note, final Continuation<? super Long> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Long>() {
       @Override
       @NonNull
@@ -90,11 +90,11 @@ public final class VoiceNoteDao_Impl implements VoiceNoteDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object delete(final long id, final Continuation<? super Unit> $completion) {
+  public Object delete(final long id, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -115,12 +115,12 @@ public final class VoiceNoteDao_Impl implements VoiceNoteDao {
           __preparedStmtOfDelete.release(_stmt);
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object getForMedia(final String mediaUri,
-      final Continuation<? super VoiceNoteEntity> $completion) {
+      final Continuation<? super VoiceNoteEntity> arg1) {
     final String _sql = "SELECT * FROM voice_notes WHERE mediaUri = ? ORDER BY createdAt DESC LIMIT 1";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -171,7 +171,7 @@ public final class VoiceNoteDao_Impl implements VoiceNoteDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override

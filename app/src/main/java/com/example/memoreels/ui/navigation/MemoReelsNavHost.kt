@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -45,16 +46,15 @@ import com.example.memoreels.ui.screen.CollectionFeedScreen
 import com.example.memoreels.ui.screen.DuplicateCleanerScreen
 import com.example.memoreels.ui.screen.ExploreScreen
 import com.example.memoreels.ui.screen.FavoritesScreen
-import com.example.memoreels.ui.screen.HighlightReelsScreen
 import com.example.memoreels.ui.screen.JournalScreen
 import com.example.memoreels.ui.screen.MemoryMapScreen
-import com.example.memoreels.ui.screen.MoodFeedScreen
 import com.example.memoreels.ui.screen.NearbySharingScreen
 import com.example.memoreels.ui.screen.OnboardingScreen
 import com.example.memoreels.ui.screen.PeopleAlbumsScreen
 import com.example.memoreels.ui.screen.PhotoFeedScreen
 import com.example.memoreels.ui.screen.TimeCapsuleScreen
 import com.example.memoreels.ui.screen.PhotoViewerScreen
+import com.example.memoreels.ui.screen.SettingsScreen
 import com.example.memoreels.ui.screen.VideoFeedScreen
 import com.example.memoreels.ui.screen.VideoPlayerScreen
 
@@ -63,6 +63,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object Photos : Screen("photos", "Photos", Icons.Default.Face)
     data object Favorites : Screen("favorites", "Favorites", Icons.Default.Favorite)
     data object Explore : Screen("explore", "Explore", Icons.Default.Search)
+    data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
     data object Onboarding : Screen("onboarding", "Onboarding", Icons.Default.Home)
     data object Player : Screen("player", "Player", Icons.Default.Home)
 }
@@ -122,14 +123,16 @@ private fun NavHostController.navigateToPhotoViewer(uri: String) {
 }
 
 /**
- * Smart media navigator: detects whether the URI is a photo or video and
- * routes to the appropriate viewer screen.
+ * Smart media navigator: detects whether the URI is a video and routes
+ * to the appropriate viewer screen. Defaults to photo viewer for
+ * unrecognized URIs (safer than showing a blank video player).
  */
 private fun NavHostController.navigateToMedia(uri: String) {
-    if (uri.contains("/images/") || uri.contains("/photo/")) {
-        navigateToPhotoViewer(uri)
-    } else {
+    val isVideo = uri.contains("/video/") || uri.contains("video%3A")
+    if (isVideo) {
         navigateToPlayer(uri)
+    } else {
+        navigateToPhotoViewer(uri)
     }
 }
 
@@ -149,9 +152,9 @@ fun MemoReelsNavHost(
     // Build tab list dynamically based on feed mode
     val tabs = remember(feedMode) {
         if (feedMode == FeedMode.SEPARATE) {
-            listOf(Screen.Feed, Screen.Photos, Screen.Favorites, Screen.Explore)
+            listOf(Screen.Feed, Screen.Photos, Screen.Favorites, Screen.Explore, Screen.Settings)
         } else {
-            listOf(Screen.Feed, Screen.Favorites, Screen.Explore)
+            listOf(Screen.Feed, Screen.Favorites, Screen.Explore, Screen.Settings)
         }
     }
 
@@ -159,8 +162,8 @@ fun MemoReelsNavHost(
 
     val currentRoute = currentDestination?.route ?: ""
     val detailRoutes = setOf(
-        "timeCapsules", "journal", "moodFeed", "duplicateCleaner",
-        "memoryMap", "highlightReels", "peopleAlbums", "nearbySharing"
+        "timeCapsules", "journal", "duplicateCleaner",
+        "memoryMap", "peopleAlbums", "nearbySharing"
     )
     val showBottomBar = currentRoute != Screen.Onboarding.route &&
         !currentRoute.startsWith("player/") &&
@@ -221,7 +224,6 @@ fun MemoReelsNavHost(
                 popExitTransition = { tabExit }
             ) {
                 VideoFeedScreen(
-                    onNavigate = { route -> navController.navigate(route) },
                     onPhotoClick = { uri -> navController.navigateToPhotoViewer(uri) }
                 )
             }
@@ -274,6 +276,18 @@ fun MemoReelsNavHost(
                         )
                         navController.navigate("collection/$encodedTag")
                     }
+                )
+            }
+
+            composable(
+                Screen.Settings.route,
+                enterTransition = { tabEnter },
+                exitTransition = { tabExit },
+                popEnterTransition = { tabEnter },
+                popExitTransition = { tabExit }
+            ) {
+                SettingsScreen(
+                    onNavigate = { route -> navController.navigate(route) }
                 )
             }
 
@@ -413,19 +427,6 @@ fun MemoReelsNavHost(
             }
 
             composable(
-                "moodFeed",
-                enterTransition = { slideInFromRight },
-                exitTransition = { slideOutToLeft },
-                popEnterTransition = { slideInFromLeft },
-                popExitTransition = { slideOutToRight }
-            ) {
-                MoodFeedScreen(
-                    onBack = { navController.popBackStack() },
-                    onMediaClick = { uri -> navController.navigateToMedia(uri) }
-                )
-            }
-
-            composable(
                 "duplicateCleaner",
                 enterTransition = { slideInFromRight },
                 exitTransition = { slideOutToLeft },
@@ -445,19 +446,6 @@ fun MemoReelsNavHost(
                 popExitTransition = { slideOutToRight }
             ) {
                 MemoryMapScreen(
-                    onBack = { navController.popBackStack() },
-                    onMediaClick = { uri -> navController.navigateToMedia(uri) }
-                )
-            }
-
-            composable(
-                "highlightReels",
-                enterTransition = { slideInFromRight },
-                exitTransition = { slideOutToLeft },
-                popEnterTransition = { slideInFromLeft },
-                popExitTransition = { slideOutToRight }
-            ) {
-                HighlightReelsScreen(
                     onBack = { navController.popBackStack() },
                     onMediaClick = { uri -> navController.navigateToMedia(uri) }
                 )

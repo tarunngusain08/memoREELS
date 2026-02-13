@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -28,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +53,6 @@ import coil.request.ImageRequest
 import com.example.memoreels.domain.model.FeedItem
 import com.example.memoreels.domain.model.Photo
 import com.example.memoreels.domain.model.PhotoDisplayMode
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
@@ -109,7 +108,10 @@ fun PhotoDisplay(
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun SinglePhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
+private fun SinglePhotoView(
+    photo: Photo,
+    onPhotoClick: (String) -> Unit = {}
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "kenBurns")
 
     val scale by infiniteTransition.animateFloat(
@@ -153,6 +155,7 @@ private fun SinglePhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
             model = ImageRequest.Builder(LocalContext.current)
                 .data(Uri.parse(photo.uri))
                 .crossfade(true)
+                .size(1080, 1920)
                 .build(),
             contentDescription = photo.displayName,
             contentScale = ContentScale.Crop,
@@ -197,12 +200,20 @@ fun StackedPhotosView(photos: List<Photo>, onPhotoClick: (String) -> Unit = {}) 
     if (photos.isEmpty()) return
 
     var currentIndex by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
     var containerWidth by remember { mutableIntStateOf(0) }
 
-    // Pre-defined rotation offsets for the stack
-    val rotations = remember { listOf(-4f, 3f, -2f, 5f) }
-    val offsets = remember { listOf(0 to 0, 12 to -8, -10 to 6, 8 to -12) }
+    // Pre-defined rotation offsets for the stack (subtle angles)
+    val rotations = remember { listOf(-3f, 2.5f, -2f, 4f) }
+    val offsets = remember { listOf(0 to 0, 10 to -6, -8 to 5, 6 to -10) }
+
+    // Spring spec for natural-feeling scale/position (shared across cards)
+    val springSpec = remember {
+        spring<Float>(dampingRatio = 0.7f, stiffness = 300f)
+    }
+    // Tween spec for alpha and z-index (smooth fade)
+    val fadeSpec = remember {
+        tween<Float>(durationMillis = 250, easing = FastOutSlowInEasing)
+    }
 
     Box(
         modifier = Modifier
@@ -231,6 +242,20 @@ fun StackedPhotosView(photos: List<Photo>, onPhotoClick: (String) -> Unit = {}) 
             val distFromCurrent = ((index - currentIndex + photos.size) % photos.size)
             val isFront = distFromCurrent == 0
 
+            // --- Alpha: smooth crossfade between front/back cards ---
+            val targetAlpha = when (distFromCurrent) {
+                0 -> 1f
+                1 -> 0.88f
+                2 -> 0.75f
+                else -> 0.65f
+            }
+            val animatedAlpha by animateFloatAsState(
+                targetValue = targetAlpha,
+                animationSpec = fadeSpec,
+                label = "stackAlpha$index"
+            )
+
+            // --- Scale: spring physics for natural bounce ---
             val targetScale = when (distFromCurrent) {
                 0 -> 1f
                 1 -> 0.92f
@@ -239,38 +264,51 @@ fun StackedPhotosView(photos: List<Photo>, onPhotoClick: (String) -> Unit = {}) 
             }
             val animatedScale by animateFloatAsState(
                 targetValue = targetScale,
-                animationSpec = tween(350, easing = FastOutSlowInEasing),
+                animationSpec = springSpec,
                 label = "stackScale$index"
             )
+
+            // --- Rotation: spring physics ---
             val targetRotation = if (isFront) 0f
                 else rotations[index % rotations.size]
             val animatedRotation by animateFloatAsState(
                 targetValue = targetRotation,
-                animationSpec = tween(350, easing = FastOutSlowInEasing),
+                animationSpec = springSpec,
                 label = "stackRot$index"
             )
+
+            // --- Offset: spring physics ---
             val (offX, offY) = if (isFront) 0 to 0
                 else offsets[index % offsets.size]
             val animatedOffX by animateFloatAsState(
                 targetValue = offX.toFloat(),
-                animationSpec = tween(350, easing = FastOutSlowInEasing),
+                animationSpec = springSpec,
                 label = "stackOffX$index"
             )
             val animatedOffY by animateFloatAsState(
                 targetValue = offY.toFloat(),
-                animationSpec = tween(350, easing = FastOutSlowInEasing),
+                animationSpec = springSpec,
                 label = "stackOffY$index"
+            )
+
+            // --- Z-index: animated via tween to prevent instant layer swap ---
+            val animatedZ by animateFloatAsState(
+                targetValue = if (isFront) 10f
+                    else (photos.size - distFromCurrent).toFloat(),
+                animationSpec = fadeSpec,
+                label = "stackZ$index"
             )
 
             Box(
                 modifier = Modifier
                     .fillMaxSize(0.82f)
-                    .zIndex(if (isFront) 10f else (photos.size - distFromCurrent).toFloat())
+                    .zIndex(animatedZ)
                     .offset { IntOffset(animatedOffX.roundToInt(), animatedOffY.roundToInt()) }
                     .graphicsLayer {
                         scaleX = animatedScale
                         scaleY = animatedScale
                         rotationZ = animatedRotation
+                        alpha = animatedAlpha
                     }
                     .shadow(
                         elevation = if (isFront) 12.dp else 4.dp,
@@ -282,7 +320,8 @@ fun StackedPhotosView(photos: List<Photo>, onPhotoClick: (String) -> Unit = {}) 
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(Uri.parse(photo.uri))
-                        .crossfade(true)
+                        .crossfade(false) // Disable Coil crossfade; our own alpha handles it
+                        .size(1080, 1920)
                         .build(),
                     contentDescription = photo.displayName,
                     contentScale = ContentScale.Crop,
@@ -432,6 +471,7 @@ private fun CollageImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(Uri.parse(photo.uri))
             .crossfade(true)
+            .size(1080, 1920)
             .build(),
         contentDescription = photo.displayName,
         contentScale = ContentScale.Crop,
@@ -470,6 +510,7 @@ private fun StylizedPhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {})
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(Uri.parse(photo.uri))
                     .crossfade(true)
+                    .size(1080, 1920)
                     .build(),
                 contentDescription = photo.displayName,
                 contentScale = ContentScale.Crop,
@@ -497,7 +538,10 @@ private fun StylizedPhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {})
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun MotionPhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
+private fun MotionPhotoView(
+    photo: Photo,
+    onPhotoClick: (String) -> Unit = {}
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "motion")
 
     val scale by infiniteTransition.animateFloat(
@@ -541,6 +585,7 @@ private fun MotionPhotoView(photo: Photo, onPhotoClick: (String) -> Unit = {}) {
             model = ImageRequest.Builder(LocalContext.current)
                 .data(Uri.parse(photo.uri))
                 .crossfade(true)
+                .size(1080, 1920)
                 .build(),
             contentDescription = photo.displayName,
             contentScale = ContentScale.Crop,

@@ -62,8 +62,7 @@ public final class VideoTagDao_Impl implements VideoTagDao {
   }
 
   @Override
-  public Object insertTags(final List<VideoTagEntity> tags,
-      final Continuation<? super Unit> $completion) {
+  public Object insertTags(final List<VideoTagEntity> tags, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -77,12 +76,12 @@ public final class VideoTagDao_Impl implements VideoTagDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object getTagsForVideo(final String uri,
-      final Continuation<? super List<VideoTagEntity>> $completion) {
+      final Continuation<? super List<VideoTagEntity>> arg1) {
     final String _sql = "SELECT * FROM video_tags WHERE videoUri = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -127,7 +126,7 @@ public final class VideoTagDao_Impl implements VideoTagDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -281,8 +280,7 @@ public final class VideoTagDao_Impl implements VideoTagDao {
   }
 
   @Override
-  public Object getFirstVideoForTag(final String tag,
-      final Continuation<? super String> $completion) {
+  public Object getFirstVideoForTag(final String tag, final Continuation<? super String> arg1) {
     final String _sql = "SELECT videoUri FROM video_tags WHERE tag = ? ORDER BY confidence DESC LIMIT 1";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -314,11 +312,11 @@ public final class VideoTagDao_Impl implements VideoTagDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getProcessedUris(final Continuation<? super List<String>> $completion) {
+  public Object getProcessedUris(final Continuation<? super List<String>> arg0) {
     final String _sql = "SELECT DISTINCT videoUri FROM video_tags";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
     final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
@@ -344,12 +342,55 @@ public final class VideoTagDao_Impl implements VideoTagDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg0);
+  }
+
+  @Override
+  public Object getAllTags(final Continuation<? super List<VideoTagEntity>> arg0) {
+    final String _sql = "SELECT * FROM video_tags ORDER BY confidence DESC";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<VideoTagEntity>>() {
+      @Override
+      @NonNull
+      public List<VideoTagEntity> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfVideoUri = CursorUtil.getColumnIndexOrThrow(_cursor, "videoUri");
+          final int _cursorIndexOfTag = CursorUtil.getColumnIndexOrThrow(_cursor, "tag");
+          final int _cursorIndexOfConfidence = CursorUtil.getColumnIndexOrThrow(_cursor, "confidence");
+          final List<VideoTagEntity> _result = new ArrayList<VideoTagEntity>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final VideoTagEntity _item;
+            final String _tmpVideoUri;
+            if (_cursor.isNull(_cursorIndexOfVideoUri)) {
+              _tmpVideoUri = null;
+            } else {
+              _tmpVideoUri = _cursor.getString(_cursorIndexOfVideoUri);
+            }
+            final String _tmpTag;
+            if (_cursor.isNull(_cursorIndexOfTag)) {
+              _tmpTag = null;
+            } else {
+              _tmpTag = _cursor.getString(_cursorIndexOfTag);
+            }
+            final float _tmpConfidence;
+            _tmpConfidence = _cursor.getFloat(_cursorIndexOfConfidence);
+            _item = new VideoTagEntity(_tmpVideoUri,_tmpTag,_tmpConfidence);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, arg0);
   }
 
   @Override
   public Object searchByTagDirect(final String query,
-      final Continuation<? super List<String>> $completion) {
+      final Continuation<? super List<String>> arg1) {
     final String _sql = "SELECT DISTINCT videoUri FROM video_tags WHERE LOWER(tag) LIKE ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -381,7 +422,7 @@ public final class VideoTagDao_Impl implements VideoTagDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @NonNull

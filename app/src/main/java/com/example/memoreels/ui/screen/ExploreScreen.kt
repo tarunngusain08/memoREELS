@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -124,6 +125,26 @@ fun ExploreScreen(
                         onClick = { onCollectionClick(collection.tag) }
                     )
                 }
+            }
+        } else if (taggingProgress != null) {
+            // Show placeholder when tags are still being generated
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = Color(0xFFE53935),
+                    strokeWidth = 2.dp
+                )
+                Text(
+                    text = "Scanning your media for categories...",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp
+                )
             }
         }
 

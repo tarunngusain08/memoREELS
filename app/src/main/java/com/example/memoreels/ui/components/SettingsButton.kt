@@ -188,10 +188,8 @@ fun SettingsButton(
                 val features = listOf(
                     Triple("timeCapsules", "Time Capsules", "Seal memories for the future"),
                     Triple("journal", "Memory Journal", "Timeline diary of your days"),
-                    Triple("moodFeed", "Mood Feed", "Browse memories by mood"),
                     Triple("duplicateCleaner", "Duplicate Cleaner", "Find and clean similar photos"),
                     Triple("memoryMap", "Memory Map", "See where your memories were made"),
-                    Triple("highlightReels", "Highlight Reels", "Auto-generate montages"),
                     Triple("peopleAlbums", "People Albums", "Face detection & grouping"),
                     Triple("nearbySharing", "Nearby Sharing", "Share via Wi-Fi Direct")
                 )

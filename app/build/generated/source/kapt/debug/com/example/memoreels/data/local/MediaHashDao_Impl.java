@@ -72,7 +72,7 @@ public final class MediaHashDao_Impl implements MediaHashDao {
 
   @Override
   public Object insertAll(final List<MediaHashEntity> hashes,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -86,11 +86,11 @@ public final class MediaHashDao_Impl implements MediaHashDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object delete(final String uri, final Continuation<? super Unit> $completion) {
+  public Object delete(final String uri, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -115,11 +115,11 @@ public final class MediaHashDao_Impl implements MediaHashDao {
           __preparedStmtOfDelete.release(_stmt);
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getAll(final Continuation<? super List<MediaHashEntity>> $completion) {
+  public Object getAll(final Continuation<? super List<MediaHashEntity>> arg0) {
     final String _sql = "SELECT * FROM media_hashes";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
     final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
@@ -155,11 +155,11 @@ public final class MediaHashDao_Impl implements MediaHashDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
-  public Object count(final Continuation<? super Integer> $completion) {
+  public Object count(final Continuation<? super Integer> arg0) {
     final String _sql = "SELECT COUNT(*) FROM media_hashes";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
     final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
@@ -187,7 +187,7 @@ public final class MediaHashDao_Impl implements MediaHashDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg0);
   }
 
   @NonNull

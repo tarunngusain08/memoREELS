@@ -31,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -72,9 +74,18 @@ fun VideoSeekBar(
         exit = fadeOut(tween(300)) + slideOutVertically(tween(300)) { it / 3 },
         modifier = modifier
     ) {
+        // Consume all touch events within the seek bar so the VideoPlayer's
+        // gesture detector (tap/press) does not steal the drag.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                        }
+                    }
+                }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.Black.copy(alpha = 0.55f))
@@ -109,7 +120,7 @@ fun VideoSeekBar(
                     )
                 }
 
-                // Seek slider
+                // Seek slider with enlarged touch target
                 val sliderValue = if (isSeeking) seekPosition
                     else if (duration > 0) currentPosition.toFloat() / duration
                     else 0f
@@ -128,7 +139,8 @@ fun VideoSeekBar(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(24.dp)
+                        .height(48.dp)
+                        .padding(vertical = 4.dp)
                         .semantics {
                             contentDescription = "Video seek bar, drag to change position"
                         },

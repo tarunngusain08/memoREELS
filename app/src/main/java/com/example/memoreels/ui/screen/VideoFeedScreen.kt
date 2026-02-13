@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,20 +57,20 @@ import com.example.memoreels.ui.components.MemoryOfMoment
 import com.example.memoreels.ui.components.MemoryOfMomentCard
 import com.example.memoreels.ui.components.MetadataOverlay
 import com.example.memoreels.ui.components.PhotoDisplay
-import com.example.memoreels.ui.components.SettingsButton
 import com.example.memoreels.ui.components.ThisDayCard
 import com.example.memoreels.ui.components.VideoPlayer
 import com.example.memoreels.ui.components.VideoSeekBar
 import com.example.memoreels.ui.components.MediaThumbnail
 import com.example.memoreels.ui.viewmodel.VideoFeedViewModel
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VideoFeedScreen(
     viewModel: VideoFeedViewModel = hiltViewModel(),
-    onNavigate: (String) -> Unit = {},
     onPhotoClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -95,16 +96,12 @@ fun VideoFeedScreen(
             favoriteUris = favoriteUris,
             thisDayVideos = thisDayVideos,
             thisDayDismissed = thisDayDismissed,
-            feedMode = feedMode,
             memoryOfMoment = memoryOfMoment,
             memoryDismissed = memoryDismissed,
             onDismissMemory = { viewModel.dismissMemory() },
-            onNavigate = onNavigate,
             onPhotoClick = onPhotoClick,
             autoMute = autoMute,
-            loopVideos = loopVideos,
-            onAutoMuteChanged = { viewModel.setAutoMute(it) },
-            onLoopVideosChanged = { viewModel.setLoopVideos(it) }
+            loopVideos = loopVideos
         )
         FeedMode.SEPARATE -> VideoOnlyFeedContent(
             viewModel = viewModel,
@@ -115,15 +112,11 @@ fun VideoFeedScreen(
             favoriteUris = favoriteUris,
             thisDayVideos = thisDayVideos,
             thisDayDismissed = thisDayDismissed,
-            feedMode = feedMode,
             memoryOfMoment = memoryOfMoment,
             memoryDismissed = memoryDismissed,
             onDismissMemory = { viewModel.dismissMemory() },
-            onNavigate = onNavigate,
             autoMute = autoMute,
-            loopVideos = loopVideos,
-            onAutoMuteChanged = { viewModel.setAutoMute(it) },
-            onLoopVideosChanged = { viewModel.setLoopVideos(it) }
+            loopVideos = loopVideos
         )
     }
 }
@@ -143,16 +136,12 @@ private fun UnifiedFeedContent(
     favoriteUris: Set<String>,
     thisDayVideos: List<com.example.memoreels.domain.model.Video>,
     thisDayDismissed: Boolean,
-    feedMode: FeedMode,
     memoryOfMoment: MemoryOfMoment?,
     memoryDismissed: Boolean,
     onDismissMemory: () -> Unit,
-    onNavigate: (String) -> Unit,
     onPhotoClick: (String) -> Unit,
     autoMute: Boolean,
-    loopVideos: Boolean,
-    onAutoMuteChanged: (Boolean) -> Unit,
-    onLoopVideosChanged: (Boolean) -> Unit
+    loopVideos: Boolean
 ) {
     val feedItems by viewModel.unifiedFeed.collectAsState()
 
@@ -267,6 +256,26 @@ private fun UnifiedFeedContent(
             }
     }
 
+    // Auto-advance to next video when loop is OFF and video ends
+    val autoAdvanceScope = rememberCoroutineScope()
+    LaunchedEffect(exoPlayer, loopVideos) {
+        if (loopVideos || isPlayerReleased.value) return@LaunchedEffect
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    val nextPage = pagerState.currentPage + 1
+                    if (nextPage < pagerState.pageCount) {
+                        autoAdvanceScope.launch {
+                            pagerState.animateScrollToPage(nextPage)
+                        }
+                    }
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        try { awaitCancellation() } finally { exoPlayer.removeListener(listener) }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         VerticalPager(
             state = pagerState,
@@ -341,19 +350,6 @@ private fun UnifiedFeedContent(
             }
         }
 
-        // Settings button - positioned at bottom-end to avoid overlapping overlays
-        SettingsButton(
-            currentMode = feedMode,
-            onModeChanged = { viewModel.setFeedMode(it) },
-            onNavigate = onNavigate,
-            autoMute = autoMute,
-            onAutoMuteChanged = onAutoMuteChanged,
-            loopVideos = loopVideos,
-            onLoopVideosChanged = onLoopVideosChanged,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 80.dp, end = 12.dp)
-        )
     }
 }
 
@@ -372,15 +368,11 @@ private fun VideoOnlyFeedContent(
     favoriteUris: Set<String>,
     thisDayVideos: List<com.example.memoreels.domain.model.Video>,
     thisDayDismissed: Boolean,
-    feedMode: FeedMode,
     memoryOfMoment: MemoryOfMoment?,
     memoryDismissed: Boolean,
     onDismissMemory: () -> Unit,
-    onNavigate: (String) -> Unit,
     autoMute: Boolean,
-    loopVideos: Boolean,
-    onAutoMuteChanged: (Boolean) -> Unit,
-    onLoopVideosChanged: (Boolean) -> Unit
+    loopVideos: Boolean
 ) {
     val pagingItems = viewModel.videos.collectAsLazyPagingItems()
 
@@ -493,6 +485,26 @@ private fun VideoOnlyFeedContent(
         }
     }
 
+    // Auto-advance to next video when loop is OFF and video ends
+    val videoAutoAdvanceScope = rememberCoroutineScope()
+    LaunchedEffect(exoPlayer, loopVideos) {
+        if (loopVideos || isPlayerReleased.value) return@LaunchedEffect
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    val nextPage = pagerState.currentPage + 1
+                    if (nextPage < pagerState.pageCount) {
+                        videoAutoAdvanceScope.launch {
+                            pagerState.animateScrollToPage(nextPage)
+                        }
+                    }
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        try { awaitCancellation() } finally { exoPlayer.removeListener(listener) }
+    }
+
     if (pagingItems.itemCount == 0 && pagingItems.loadState.refresh is LoadState.Loading) {
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black),
@@ -572,18 +584,6 @@ private fun VideoOnlyFeedContent(
                 }
             }
 
-            SettingsButton(
-                currentMode = feedMode,
-                onModeChanged = { viewModel.setFeedMode(it) },
-                onNavigate = onNavigate,
-                autoMute = autoMute,
-                onAutoMuteChanged = onAutoMuteChanged,
-                loopVideos = loopVideos,
-                onLoopVideosChanged = onLoopVideosChanged,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 80.dp, end = 12.dp)
-            )
         }
     }
 }
@@ -620,11 +620,11 @@ private fun VideoFeedPage(
 
         MetadataOverlay(video = video, visible = isCurrent)
 
-        // Right-side action buttons
+        // Right-side action buttons (above seek bar area)
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 72.dp),
+                .padding(end = 12.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -642,14 +642,14 @@ private fun VideoFeedPage(
             }
         }
 
-        // Seek bar: visible when paused
+        // Seek bar: visible when paused, with end padding to clear action buttons
         if (isCurrent) {
             VideoSeekBar(
                 exoPlayer = exoPlayer,
                 visible = !isPlaying,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 16.dp, end = 56.dp)
             )
         }
     }

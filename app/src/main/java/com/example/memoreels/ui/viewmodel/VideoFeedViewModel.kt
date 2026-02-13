@@ -9,9 +9,8 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.memoreels.data.datasource.FeedItemFactory
 import com.example.memoreels.data.datasource.PhotoDataSource
+import com.example.memoreels.data.local.MediaLocationDao
 import com.example.memoreels.data.local.VideoTagDao
-import com.example.memoreels.data.ml.PhotoTagger
-import com.example.memoreels.data.ml.VideoTagger
 import com.example.memoreels.data.preferences.FeedMode
 import com.example.memoreels.data.preferences.UserPreferences
 import com.example.memoreels.ui.components.MemoryOfMoment
@@ -41,11 +40,10 @@ class VideoFeedViewModel @Inject constructor(
     private val toggleFavorite: ToggleFavoriteUseCase,
     private val repository: VideoRepository,
     private val getThisDayVideos: GetThisDayVideosUseCase,
-    private val videoTagger: VideoTagger,
-    private val photoTagger: PhotoTagger,
     private val photoDataSource: PhotoDataSource,
     private val feedItemFactory: FeedItemFactory,
     private val videoTagDao: VideoTagDao,
+    private val mediaLocationDao: MediaLocationDao,
     val userPreferences: UserPreferences,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
@@ -98,7 +96,7 @@ class VideoFeedViewModel @Inject constructor(
     val memoryDismissed: StateFlow<Boolean> = _memoryDismissed.asStateFlow()
 
     init {
-        // Observe favorites
+        // Observe favorites (fast DB query)
         viewModelScope.launch {
             try {
                 repository.getFavorites().collect { favorites ->
@@ -108,23 +106,7 @@ class VideoFeedViewModel @Inject constructor(
                 Log.e(TAG, "Failed to observe favorites", e)
             }
         }
-        // Launch background video tagging
-        viewModelScope.launch {
-            try {
-                videoTagger.processUntaggedVideos()
-            } catch (e: Exception) {
-                Log.e(TAG, "Video tagging failed", e)
-            }
-        }
-        // Launch background photo tagging
-        viewModelScope.launch {
-            try {
-                photoTagger.processUntaggedPhotos()
-            } catch (e: Exception) {
-                Log.e(TAG, "Photo tagging failed", e)
-            }
-        }
-        // Pick Memory of the Moment
+        // Pick Memory of the Moment (fast DB query)
         viewModelScope.launch {
             try {
                 val allUris = videoTagDao.getProcessedUris()
@@ -141,7 +123,8 @@ class VideoFeedViewModel @Inject constructor(
                 Log.e(TAG, "Failed to pick memory of the moment", e)
             }
         }
-        // Build unified feed
+        // Build unified feed (medium - MediaStore + DB)
+        // Note: ML tagging is now handled by WorkManager (MediaTaggingWorker)
         loadUnifiedFeed()
     }
 
@@ -162,8 +145,16 @@ class VideoFeedViewModel @Inject constructor(
                     }
                 }
 
+                // Build location map for proximity-based grouping
+                val locations = withContext(Dispatchers.IO) {
+                    try { mediaLocationDao.getAllSync() } catch (_: Exception) { emptyList() }
+                }
+                val photoLocations = locations.associate {
+                    it.mediaUri to (it.latitude to it.longitude)
+                }
+
                 _unifiedFeed.value = feedItemFactory.buildUnifiedFeed(
-                    videoList, photos, photoTags
+                    videoList, photos, photoTags, photoLocations
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load unified feed", e)

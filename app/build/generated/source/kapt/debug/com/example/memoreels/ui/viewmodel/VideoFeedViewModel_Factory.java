@@ -3,9 +3,8 @@ package com.example.memoreels.ui.viewmodel;
 import android.content.Context;
 import com.example.memoreels.data.datasource.FeedItemFactory;
 import com.example.memoreels.data.datasource.PhotoDataSource;
+import com.example.memoreels.data.local.MediaLocationDao;
 import com.example.memoreels.data.local.VideoTagDao;
-import com.example.memoreels.data.ml.PhotoTagger;
-import com.example.memoreels.data.ml.VideoTagger;
 import com.example.memoreels.data.preferences.UserPreferences;
 import com.example.memoreels.domain.repository.VideoRepository;
 import com.example.memoreels.domain.usecase.GetThisDayVideosUseCase;
@@ -41,15 +40,13 @@ public final class VideoFeedViewModel_Factory implements Factory<VideoFeedViewMo
 
   private final Provider<GetThisDayVideosUseCase> getThisDayVideosProvider;
 
-  private final Provider<VideoTagger> videoTaggerProvider;
-
-  private final Provider<PhotoTagger> photoTaggerProvider;
-
   private final Provider<PhotoDataSource> photoDataSourceProvider;
 
   private final Provider<FeedItemFactory> feedItemFactoryProvider;
 
   private final Provider<VideoTagDao> videoTagDaoProvider;
+
+  private final Provider<MediaLocationDao> mediaLocationDaoProvider;
 
   private final Provider<UserPreferences> userPreferencesProvider;
 
@@ -59,44 +56,43 @@ public final class VideoFeedViewModel_Factory implements Factory<VideoFeedViewMo
       Provider<ToggleFavoriteUseCase> toggleFavoriteProvider,
       Provider<VideoRepository> repositoryProvider,
       Provider<GetThisDayVideosUseCase> getThisDayVideosProvider,
-      Provider<VideoTagger> videoTaggerProvider, Provider<PhotoTagger> photoTaggerProvider,
       Provider<PhotoDataSource> photoDataSourceProvider,
       Provider<FeedItemFactory> feedItemFactoryProvider, Provider<VideoTagDao> videoTagDaoProvider,
+      Provider<MediaLocationDao> mediaLocationDaoProvider,
       Provider<UserPreferences> userPreferencesProvider, Provider<Context> appContextProvider) {
     this.getVideosProvider = getVideosProvider;
     this.toggleFavoriteProvider = toggleFavoriteProvider;
     this.repositoryProvider = repositoryProvider;
     this.getThisDayVideosProvider = getThisDayVideosProvider;
-    this.videoTaggerProvider = videoTaggerProvider;
-    this.photoTaggerProvider = photoTaggerProvider;
     this.photoDataSourceProvider = photoDataSourceProvider;
     this.feedItemFactoryProvider = feedItemFactoryProvider;
     this.videoTagDaoProvider = videoTagDaoProvider;
+    this.mediaLocationDaoProvider = mediaLocationDaoProvider;
     this.userPreferencesProvider = userPreferencesProvider;
     this.appContextProvider = appContextProvider;
   }
 
   @Override
   public VideoFeedViewModel get() {
-    return newInstance(getVideosProvider.get(), toggleFavoriteProvider.get(), repositoryProvider.get(), getThisDayVideosProvider.get(), videoTaggerProvider.get(), photoTaggerProvider.get(), photoDataSourceProvider.get(), feedItemFactoryProvider.get(), videoTagDaoProvider.get(), userPreferencesProvider.get(), appContextProvider.get());
+    return newInstance(getVideosProvider.get(), toggleFavoriteProvider.get(), repositoryProvider.get(), getThisDayVideosProvider.get(), photoDataSourceProvider.get(), feedItemFactoryProvider.get(), videoTagDaoProvider.get(), mediaLocationDaoProvider.get(), userPreferencesProvider.get(), appContextProvider.get());
   }
 
   public static VideoFeedViewModel_Factory create(Provider<GetVideosUseCase> getVideosProvider,
       Provider<ToggleFavoriteUseCase> toggleFavoriteProvider,
       Provider<VideoRepository> repositoryProvider,
       Provider<GetThisDayVideosUseCase> getThisDayVideosProvider,
-      Provider<VideoTagger> videoTaggerProvider, Provider<PhotoTagger> photoTaggerProvider,
       Provider<PhotoDataSource> photoDataSourceProvider,
       Provider<FeedItemFactory> feedItemFactoryProvider, Provider<VideoTagDao> videoTagDaoProvider,
+      Provider<MediaLocationDao> mediaLocationDaoProvider,
       Provider<UserPreferences> userPreferencesProvider, Provider<Context> appContextProvider) {
-    return new VideoFeedViewModel_Factory(getVideosProvider, toggleFavoriteProvider, repositoryProvider, getThisDayVideosProvider, videoTaggerProvider, photoTaggerProvider, photoDataSourceProvider, feedItemFactoryProvider, videoTagDaoProvider, userPreferencesProvider, appContextProvider);
+    return new VideoFeedViewModel_Factory(getVideosProvider, toggleFavoriteProvider, repositoryProvider, getThisDayVideosProvider, photoDataSourceProvider, feedItemFactoryProvider, videoTagDaoProvider, mediaLocationDaoProvider, userPreferencesProvider, appContextProvider);
   }
 
   public static VideoFeedViewModel newInstance(GetVideosUseCase getVideos,
       ToggleFavoriteUseCase toggleFavorite, VideoRepository repository,
-      GetThisDayVideosUseCase getThisDayVideos, VideoTagger videoTagger, PhotoTagger photoTagger,
-      PhotoDataSource photoDataSource, FeedItemFactory feedItemFactory, VideoTagDao videoTagDao,
+      GetThisDayVideosUseCase getThisDayVideos, PhotoDataSource photoDataSource,
+      FeedItemFactory feedItemFactory, VideoTagDao videoTagDao, MediaLocationDao mediaLocationDao,
       UserPreferences userPreferences, Context appContext) {
-    return new VideoFeedViewModel(getVideos, toggleFavorite, repository, getThisDayVideos, videoTagger, photoTagger, photoDataSource, feedItemFactory, videoTagDao, userPreferences, appContext);
+    return new VideoFeedViewModel(getVideos, toggleFavorite, repository, getThisDayVideos, photoDataSource, feedItemFactory, videoTagDao, mediaLocationDao, userPreferences, appContext);
   }
 }

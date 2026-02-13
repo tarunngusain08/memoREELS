@@ -1,5 +1,6 @@
 package com.example.memoreels.ui.screen;
 
+import androidx.compose.foundation.layout.Arrangement;
 import androidx.compose.material.icons.Icons;
 import androidx.compose.runtime.Composable;
 import androidx.compose.ui.Alignment;
@@ -12,9 +13,9 @@ import com.example.memoreels.ui.viewmodel.MemoryMapViewModel;
 public final class MemoryMapScreenKt {
     
     /**
-     * Memory Map screen showing media locations on a map.
-     * Note: Full map integration requires osmdroid dependency.
-     * This screen shows a list-based location view as a starting point.
+     * Memory Map screen showing media locations.
+     * Each row displays a photo thumbnail, location name/coordinates,
+     * and is clickable to open the associated media.
      */
     @androidx.compose.runtime.Composable()
     public static final void MemoryMapScreen(@org.jetbrains.annotations.NotNull()

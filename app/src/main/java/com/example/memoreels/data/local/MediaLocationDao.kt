@@ -16,9 +16,15 @@ interface MediaLocationDao {
     @Query("SELECT * FROM media_locations")
     fun getAll(): Flow<List<MediaLocationEntity>>
 
+    @Query("SELECT * FROM media_locations")
+    suspend fun getAllSync(): List<MediaLocationEntity>
+
     @Query("SELECT * FROM media_locations WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLng AND :maxLng")
     fun getInBounds(minLat: Double, maxLat: Double, minLng: Double, maxLng: Double): Flow<List<MediaLocationEntity>>
 
     @Query("SELECT COUNT(*) FROM media_locations")
     suspend fun count(): Int
+
+    @Query("UPDATE media_locations SET locationName = :name WHERE mediaUri = :mediaUri")
+    suspend fun updateLocationName(mediaUri: String, name: String)
 }

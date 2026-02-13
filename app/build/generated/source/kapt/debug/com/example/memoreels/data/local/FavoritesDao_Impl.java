@@ -75,8 +75,7 @@ public final class FavoritesDao_Impl implements FavoritesDao {
   }
 
   @Override
-  public Object insertFavorite(final FavoriteEntity entity,
-      final Continuation<? super Unit> $completion) {
+  public Object insertFavorite(final FavoriteEntity entity, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -90,11 +89,11 @@ public final class FavoritesDao_Impl implements FavoritesDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object removeFavorite(final String uri, final Continuation<? super Unit> $completion) {
+  public Object removeFavorite(final String uri, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -119,7 +118,7 @@ public final class FavoritesDao_Impl implements FavoritesDao {
           __preparedStmtOfRemoveFavorite.release(_stmt);
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -169,7 +168,7 @@ public final class FavoritesDao_Impl implements FavoritesDao {
   }
 
   @Override
-  public Object isFavorite(final String uri, final Continuation<? super Boolean> $completion) {
+  public Object isFavorite(final String uri, final Continuation<? super Boolean> arg1) {
     final String _sql = "SELECT EXISTS(SELECT 1 FROM favorites WHERE videoUri = ?)";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -203,12 +202,12 @@ public final class FavoritesDao_Impl implements FavoritesDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object getFavoriteByUri(final String uri,
-      final Continuation<? super FavoriteEntity> $completion) {
+      final Continuation<? super FavoriteEntity> arg1) {
     final String _sql = "SELECT * FROM favorites WHERE videoUri = ? LIMIT 1";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -253,7 +252,7 @@ public final class FavoritesDao_Impl implements FavoritesDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @NonNull

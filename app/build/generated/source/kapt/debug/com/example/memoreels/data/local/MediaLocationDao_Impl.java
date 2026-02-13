@@ -7,6 +7,7 @@ import androidx.room.CoroutinesRoom;
 import androidx.room.EntityInsertionAdapter;
 import androidx.room.RoomDatabase;
 import androidx.room.RoomSQLiteQuery;
+import androidx.room.SharedSQLiteStatement;
 import androidx.room.util.CursorUtil;
 import androidx.room.util.DBUtil;
 import androidx.sqlite.db.SupportSQLiteStatement;
@@ -34,6 +35,8 @@ public final class MediaLocationDao_Impl implements MediaLocationDao {
 
   private final EntityInsertionAdapter<MediaLocationEntity> __insertionAdapterOfMediaLocationEntity;
 
+  private final SharedSQLiteStatement __preparedStmtOfUpdateLocationName;
+
   public MediaLocationDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
     this.__insertionAdapterOfMediaLocationEntity = new EntityInsertionAdapter<MediaLocationEntity>(__db) {
@@ -60,6 +63,14 @@ public final class MediaLocationDao_Impl implements MediaLocationDao {
         }
       }
     };
+    this.__preparedStmtOfUpdateLocationName = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "UPDATE media_locations SET locationName = ? WHERE mediaUri = ?";
+        return _query;
+      }
+    };
   }
 
   @Override
@@ -76,6 +87,42 @@ public final class MediaLocationDao_Impl implements MediaLocationDao {
           return Unit.INSTANCE;
         } finally {
           __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateLocationName(final String mediaUri, final String name,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfUpdateLocationName.acquire();
+        int _argIndex = 1;
+        if (name == null) {
+          _stmt.bindNull(_argIndex);
+        } else {
+          _stmt.bindString(_argIndex, name);
+        }
+        _argIndex = 2;
+        if (mediaUri == null) {
+          _stmt.bindNull(_argIndex);
+        } else {
+          _stmt.bindString(_argIndex, mediaUri);
+        }
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfUpdateLocationName.release(_stmt);
         }
       }
     }, $completion);
@@ -128,6 +175,52 @@ public final class MediaLocationDao_Impl implements MediaLocationDao {
         _statement.release();
       }
     });
+  }
+
+  @Override
+  public Object getAllSync(final Continuation<? super List<MediaLocationEntity>> $completion) {
+    final String _sql = "SELECT * FROM media_locations";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<MediaLocationEntity>>() {
+      @Override
+      @NonNull
+      public List<MediaLocationEntity> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfMediaUri = CursorUtil.getColumnIndexOrThrow(_cursor, "mediaUri");
+          final int _cursorIndexOfLatitude = CursorUtil.getColumnIndexOrThrow(_cursor, "latitude");
+          final int _cursorIndexOfLongitude = CursorUtil.getColumnIndexOrThrow(_cursor, "longitude");
+          final int _cursorIndexOfLocationName = CursorUtil.getColumnIndexOrThrow(_cursor, "locationName");
+          final List<MediaLocationEntity> _result = new ArrayList<MediaLocationEntity>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final MediaLocationEntity _item;
+            final String _tmpMediaUri;
+            if (_cursor.isNull(_cursorIndexOfMediaUri)) {
+              _tmpMediaUri = null;
+            } else {
+              _tmpMediaUri = _cursor.getString(_cursorIndexOfMediaUri);
+            }
+            final double _tmpLatitude;
+            _tmpLatitude = _cursor.getDouble(_cursorIndexOfLatitude);
+            final double _tmpLongitude;
+            _tmpLongitude = _cursor.getDouble(_cursorIndexOfLongitude);
+            final String _tmpLocationName;
+            if (_cursor.isNull(_cursorIndexOfLocationName)) {
+              _tmpLocationName = null;
+            } else {
+              _tmpLocationName = _cursor.getString(_cursorIndexOfLocationName);
+            }
+            _item = new MediaLocationEntity(_tmpMediaUri,_tmpLatitude,_tmpLongitude,_tmpLocationName);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
   }
 
   @Override

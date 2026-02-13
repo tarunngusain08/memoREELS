@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -51,14 +51,17 @@ class ExploreViewModel @Inject constructor(
     // --- Collections (shuffled on each ViewModel creation) ---
 
     val collections: StateFlow<List<VideoCollection>> = videoTagDao.getTagCounts()
-        .map { tagCounts ->
-            tagCounts.map { tc ->
-                VideoCollection(
-                    tag = tc.tag,
-                    videoCount = tc.cnt,
-                    thumbnailUri = videoTagDao.getFirstVideoForTag(tc.tag)
-                )
-            }.shuffled()
+        .flatMapLatest { tagCounts ->
+            flow {
+                val result = tagCounts.map { tc ->
+                    VideoCollection(
+                        tag = tc.tag,
+                        videoCount = tc.cnt,
+                        thumbnailUri = videoTagDao.getFirstVideoForTag(tc.tag)
+                    )
+                }.shuffled()
+                emit(result)
+            }
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 

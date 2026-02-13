@@ -74,8 +74,7 @@ public final class JournalDao_Impl implements JournalDao {
   }
 
   @Override
-  public Object upsert(final JournalEntryEntity entry,
-      final Continuation<? super Unit> $completion) {
+  public Object upsert(final JournalEntryEntity entry, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -89,11 +88,11 @@ public final class JournalDao_Impl implements JournalDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object delete(final String date, final Continuation<? super Unit> $completion) {
+  public Object delete(final String date, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -118,12 +117,11 @@ public final class JournalDao_Impl implements JournalDao {
           __preparedStmtOfDelete.release(_stmt);
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getForDate(final String date,
-      final Continuation<? super JournalEntryEntity> $completion) {
+  public Object getForDate(final String date, final Continuation<? super JournalEntryEntity> arg1) {
     final String _sql = "SELECT * FROM journal_entries WHERE date = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -171,7 +169,7 @@ public final class JournalDao_Impl implements JournalDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override

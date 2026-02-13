@@ -7,9 +7,8 @@ import androidx.lifecycle.ViewModel;
 import androidx.paging.PagingData;
 import com.example.memoreels.data.datasource.FeedItemFactory;
 import com.example.memoreels.data.datasource.PhotoDataSource;
+import com.example.memoreels.data.local.MediaLocationDao;
 import com.example.memoreels.data.local.VideoTagDao;
-import com.example.memoreels.data.ml.PhotoTagger;
-import com.example.memoreels.data.ml.VideoTagger;
 import com.example.memoreels.data.preferences.FeedMode;
 import com.example.memoreels.data.preferences.UserPreferences;
 import com.example.memoreels.ui.components.MemoryOfMoment;
@@ -28,7 +27,7 @@ import kotlinx.coroutines.flow.SharingStarted;
 import kotlinx.coroutines.flow.StateFlow;
 import javax.inject.Inject;
 
-@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u00a2\u0001\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\u0010\"\n\u0002\u0010\u000e\n\u0000\n\u0002\u0010\u000b\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\n\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0010\u0002\n\u0002\b\f\b\u0007\u0018\u0000 L2\u00020\u0001:\u0001LBa\b\u0007\u0012\u0006\u0010\u0002\u001a\u00020\u0003\u0012\u0006\u0010\u0004\u001a\u00020\u0005\u0012\u0006\u0010\u0006\u001a\u00020\u0007\u0012\u0006\u0010\b\u001a\u00020\t\u0012\u0006\u0010\n\u001a\u00020\u000b\u0012\u0006\u0010\f\u001a\u00020\r\u0012\u0006\u0010\u000e\u001a\u00020\u000f\u0012\u0006\u0010\u0010\u001a\u00020\u0011\u0012\u0006\u0010\u0012\u001a\u00020\u0013\u0012\u0006\u0010\u0014\u001a\u00020\u0015\u0012\b\b\u0001\u0010\u0016\u001a\u00020\u0017\u00a2\u0006\u0002\u0010\u0018J\u0006\u0010@\u001a\u00020AJ\u0006\u0010B\u001a\u00020AJ\u0014\u0010C\u001a\b\u0012\u0004\u0012\u0002070%H\u0082@\u00a2\u0006\u0002\u0010DJ\b\u0010E\u001a\u00020AH\u0002J\u000e\u0010F\u001a\u00020A2\u0006\u0010G\u001a\u000207J\u000e\u0010H\u001a\u00020A2\u0006\u0010I\u001a\u00020,J\u0006\u0010J\u001a\u00020AJ\u0006\u0010K\u001a\u00020AR\u001a\u0010\u0019\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u001c0\u001b0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u001d\u001a\b\u0012\u0004\u0012\u00020\u001e0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u001f\u001a\b\u0012\u0004\u0012\u00020\u001e0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010 \u001a\b\u0012\u0004\u0012\u00020\u001e0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0016\u0010!\u001a\n\u0012\u0006\u0012\u0004\u0018\u00010\"0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010#\u001a\b\u0012\u0004\u0012\u00020\u001e0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001a\u0010$\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020&0%0\u001aX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0016\u001a\u00020\u0017X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001d\u0010\'\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u001c0\u001b0(\u00a2\u0006\b\n\u0000\u001a\u0004\b)\u0010*R\u000e\u0010\u0010\u001a\u00020\u0011X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010+\u001a\b\u0012\u0004\u0012\u00020,0(\u00a2\u0006\b\n\u0000\u001a\u0004\b-\u0010*R\u000e\u0010\b\u001a\u00020\tX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0002\u001a\u00020\u0003X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010.\u001a\b\u0012\u0004\u0012\u00020\u001e0(\u00a2\u0006\b\n\u0000\u001a\u0004\b.\u0010*R\u0017\u0010/\u001a\b\u0012\u0004\u0012\u00020\u001e0(\u00a2\u0006\b\n\u0000\u001a\u0004\b/\u0010*R\u0017\u00100\u001a\b\u0012\u0004\u0012\u00020\u001e0(\u00a2\u0006\b\n\u0000\u001a\u0004\b1\u0010*R\u0019\u00102\u001a\n\u0012\u0006\u0012\u0004\u0018\u00010\"0(\u00a2\u0006\b\n\u0000\u001a\u0004\b3\u0010*R\u000e\u0010\u000e\u001a\u00020\u000fX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\rX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0007X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u00104\u001a\b\u0012\u0004\u0012\u00020\u001e0(\u00a2\u0006\b\n\u0000\u001a\u0004\b5\u0010*R\u001d\u00106\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u0002070%0(\u00a2\u0006\b\n\u0000\u001a\u0004\b\b\u0010*R\u000e\u0010\u0004\u001a\u00020\u0005X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001d\u00108\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020&0%0(\u00a2\u0006\b\n\u0000\u001a\u0004\b9\u0010*R\u0011\u0010\u0014\u001a\u00020\u0015\u00a2\u0006\b\n\u0000\u001a\u0004\b:\u0010;R\u000e\u0010\u0012\u001a\u00020\u0013X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u000bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001d\u0010<\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u0002070>0=\u00a2\u0006\b\n\u0000\u001a\u0004\b\u0002\u0010?\u00a8\u0006M"}, d2 = {"Lcom/example/memoreels/ui/viewmodel/VideoFeedViewModel;", "Landroidx/lifecycle/ViewModel;", "getVideos", "Lcom/example/memoreels/domain/usecase/GetVideosUseCase;", "toggleFavorite", "Lcom/example/memoreels/domain/usecase/ToggleFavoriteUseCase;", "repository", "Lcom/example/memoreels/domain/repository/VideoRepository;", "getThisDayVideos", "Lcom/example/memoreels/domain/usecase/GetThisDayVideosUseCase;", "videoTagger", "Lcom/example/memoreels/data/ml/VideoTagger;", "photoTagger", "Lcom/example/memoreels/data/ml/PhotoTagger;", "photoDataSource", "Lcom/example/memoreels/data/datasource/PhotoDataSource;", "feedItemFactory", "Lcom/example/memoreels/data/datasource/FeedItemFactory;", "videoTagDao", "Lcom/example/memoreels/data/local/VideoTagDao;", "userPreferences", "Lcom/example/memoreels/data/preferences/UserPreferences;", "appContext", "Landroid/content/Context;", "(Lcom/example/memoreels/domain/usecase/GetVideosUseCase;Lcom/example/memoreels/domain/usecase/ToggleFavoriteUseCase;Lcom/example/memoreels/domain/repository/VideoRepository;Lcom/example/memoreels/domain/usecase/GetThisDayVideosUseCase;Lcom/example/memoreels/data/ml/VideoTagger;Lcom/example/memoreels/data/ml/PhotoTagger;Lcom/example/memoreels/data/datasource/PhotoDataSource;Lcom/example/memoreels/data/datasource/FeedItemFactory;Lcom/example/memoreels/data/local/VideoTagDao;Lcom/example/memoreels/data/preferences/UserPreferences;Landroid/content/Context;)V", "_favoriteUris", "Lkotlinx/coroutines/flow/MutableStateFlow;", "", "", "_isMuted", "", "_isPlaying", "_memoryDismissed", "_memoryOfMoment", "Lcom/example/memoreels/ui/components/MemoryOfMoment;", "_thisDayDismissed", "_unifiedFeed", "", "Lcom/example/memoreels/domain/model/FeedItem;", "favoriteUris", "Lkotlinx/coroutines/flow/StateFlow;", "getFavoriteUris", "()Lkotlinx/coroutines/flow/StateFlow;", "feedMode", "Lcom/example/memoreels/data/preferences/FeedMode;", "getFeedMode", "isMuted", "isPlaying", "memoryDismissed", "getMemoryDismissed", "memoryOfMoment", "getMemoryOfMoment", "thisDayDismissed", "getThisDayDismissed", "thisDayVideos", "Lcom/example/memoreels/domain/model/Video;", "unifiedFeed", "getUnifiedFeed", "getUserPreferences", "()Lcom/example/memoreels/data/preferences/UserPreferences;", "videos", "Lkotlinx/coroutines/flow/Flow;", "Landroidx/paging/PagingData;", "()Lkotlinx/coroutines/flow/Flow;", "dismissMemory", "", "dismissThisDay", "loadAllVideos", "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;", "loadUnifiedFeed", "onToggleFavorite", "video", "setFeedMode", "mode", "toggleMute", "togglePlayPause", "Companion", "app_debug"})
+@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u009c\u0001\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\u0010\"\n\u0002\u0010\u000e\n\u0000\n\u0002\u0010\u000b\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0002\b\f\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0010\u0002\n\u0002\b\u000f\b\u0007\u0018\u0000 Q2\u00020\u0001:\u0001QBY\b\u0007\u0012\u0006\u0010\u0002\u001a\u00020\u0003\u0012\u0006\u0010\u0004\u001a\u00020\u0005\u0012\u0006\u0010\u0006\u001a\u00020\u0007\u0012\u0006\u0010\b\u001a\u00020\t\u0012\u0006\u0010\n\u001a\u00020\u000b\u0012\u0006\u0010\f\u001a\u00020\r\u0012\u0006\u0010\u000e\u001a\u00020\u000f\u0012\u0006\u0010\u0010\u001a\u00020\u0011\u0012\u0006\u0010\u0012\u001a\u00020\u0013\u0012\b\b\u0001\u0010\u0014\u001a\u00020\u0015\u00a2\u0006\u0002\u0010\u0016J\u0006\u0010B\u001a\u00020CJ\u0006\u0010D\u001a\u00020CJ\u0014\u0010E\u001a\b\u0012\u0004\u0012\u0002090#H\u0082@\u00a2\u0006\u0002\u0010FJ\b\u0010G\u001a\u00020CH\u0002J\u000e\u0010H\u001a\u00020C2\u0006\u0010I\u001a\u000209J\u000e\u0010J\u001a\u00020C2\u0006\u0010K\u001a\u00020\u001cJ\u000e\u0010L\u001a\u00020C2\u0006\u0010M\u001a\u00020,J\u000e\u0010N\u001a\u00020C2\u0006\u0010K\u001a\u00020\u001cJ\u0006\u0010O\u001a\u00020CJ\u0006\u0010P\u001a\u00020CR\u001a\u0010\u0017\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u001a0\u00190\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u001b\u001a\b\u0012\u0004\u0012\u00020\u001c0\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u001d\u001a\b\u0012\u0004\u0012\u00020\u001c0\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u001e\u001a\b\u0012\u0004\u0012\u00020\u001c0\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0016\u0010\u001f\u001a\n\u0012\u0006\u0012\u0004\u0018\u00010 0\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010!\u001a\b\u0012\u0004\u0012\u00020\u001c0\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001a\u0010\"\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020$0#0\u0018X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0014\u001a\u00020\u0015X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010%\u001a\b\u0012\u0004\u0012\u00020\u001c0&\u00a2\u0006\b\n\u0000\u001a\u0004\b\'\u0010(R\u001d\u0010)\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u001a0\u00190&\u00a2\u0006\b\n\u0000\u001a\u0004\b*\u0010(R\u000e\u0010\f\u001a\u00020\rX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010+\u001a\b\u0012\u0004\u0012\u00020,0&\u00a2\u0006\b\n\u0000\u001a\u0004\b-\u0010(R\u000e\u0010\b\u001a\u00020\tX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0002\u001a\u00020\u0003X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010.\u001a\b\u0012\u0004\u0012\u00020\u001c0&\u00a2\u0006\b\n\u0000\u001a\u0004\b.\u0010(R\u0017\u0010/\u001a\b\u0012\u0004\u0012\u00020\u001c0&\u00a2\u0006\b\n\u0000\u001a\u0004\b/\u0010(R\u0017\u00100\u001a\b\u0012\u0004\u0012\u00020\u001c0&\u00a2\u0006\b\n\u0000\u001a\u0004\b1\u0010(R\u000e\u0010\u0010\u001a\u00020\u0011X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u00102\u001a\b\u0012\u0004\u0012\u00020\u001c0&\u00a2\u0006\b\n\u0000\u001a\u0004\b3\u0010(R\u0019\u00104\u001a\n\u0012\u0006\u0012\u0004\u0018\u00010 0&\u00a2\u0006\b\n\u0000\u001a\u0004\b5\u0010(R\u000e\u0010\n\u001a\u00020\u000bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0007X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u00106\u001a\b\u0012\u0004\u0012\u00020\u001c0&\u00a2\u0006\b\n\u0000\u001a\u0004\b7\u0010(R\u001d\u00108\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u0002090#0&\u00a2\u0006\b\n\u0000\u001a\u0004\b\b\u0010(R\u000e\u0010\u0004\u001a\u00020\u0005X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001d\u0010:\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020$0#0&\u00a2\u0006\b\n\u0000\u001a\u0004\b;\u0010(R\u0011\u0010\u0012\u001a\u00020\u0013\u00a2\u0006\b\n\u0000\u001a\u0004\b<\u0010=R\u000e\u0010\u000e\u001a\u00020\u000fX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001d\u0010>\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u0002090@0?\u00a2\u0006\b\n\u0000\u001a\u0004\b\u0002\u0010A\u00a8\u0006R"}, d2 = {"Lcom/example/memoreels/ui/viewmodel/VideoFeedViewModel;", "Landroidx/lifecycle/ViewModel;", "getVideos", "Lcom/example/memoreels/domain/usecase/GetVideosUseCase;", "toggleFavorite", "Lcom/example/memoreels/domain/usecase/ToggleFavoriteUseCase;", "repository", "Lcom/example/memoreels/domain/repository/VideoRepository;", "getThisDayVideos", "Lcom/example/memoreels/domain/usecase/GetThisDayVideosUseCase;", "photoDataSource", "Lcom/example/memoreels/data/datasource/PhotoDataSource;", "feedItemFactory", "Lcom/example/memoreels/data/datasource/FeedItemFactory;", "videoTagDao", "Lcom/example/memoreels/data/local/VideoTagDao;", "mediaLocationDao", "Lcom/example/memoreels/data/local/MediaLocationDao;", "userPreferences", "Lcom/example/memoreels/data/preferences/UserPreferences;", "appContext", "Landroid/content/Context;", "(Lcom/example/memoreels/domain/usecase/GetVideosUseCase;Lcom/example/memoreels/domain/usecase/ToggleFavoriteUseCase;Lcom/example/memoreels/domain/repository/VideoRepository;Lcom/example/memoreels/domain/usecase/GetThisDayVideosUseCase;Lcom/example/memoreels/data/datasource/PhotoDataSource;Lcom/example/memoreels/data/datasource/FeedItemFactory;Lcom/example/memoreels/data/local/VideoTagDao;Lcom/example/memoreels/data/local/MediaLocationDao;Lcom/example/memoreels/data/preferences/UserPreferences;Landroid/content/Context;)V", "_favoriteUris", "Lkotlinx/coroutines/flow/MutableStateFlow;", "", "", "_isMuted", "", "_isPlaying", "_memoryDismissed", "_memoryOfMoment", "Lcom/example/memoreels/ui/components/MemoryOfMoment;", "_thisDayDismissed", "_unifiedFeed", "", "Lcom/example/memoreels/domain/model/FeedItem;", "autoMute", "Lkotlinx/coroutines/flow/StateFlow;", "getAutoMute", "()Lkotlinx/coroutines/flow/StateFlow;", "favoriteUris", "getFavoriteUris", "feedMode", "Lcom/example/memoreels/data/preferences/FeedMode;", "getFeedMode", "isMuted", "isPlaying", "loopVideos", "getLoopVideos", "memoryDismissed", "getMemoryDismissed", "memoryOfMoment", "getMemoryOfMoment", "thisDayDismissed", "getThisDayDismissed", "thisDayVideos", "Lcom/example/memoreels/domain/model/Video;", "unifiedFeed", "getUnifiedFeed", "getUserPreferences", "()Lcom/example/memoreels/data/preferences/UserPreferences;", "videos", "Lkotlinx/coroutines/flow/Flow;", "Landroidx/paging/PagingData;", "()Lkotlinx/coroutines/flow/Flow;", "dismissMemory", "", "dismissThisDay", "loadAllVideos", "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;", "loadUnifiedFeed", "onToggleFavorite", "video", "setAutoMute", "enabled", "setFeedMode", "mode", "setLoopVideos", "toggleMute", "togglePlayPause", "Companion", "app_debug"})
 @dagger.hilt.android.lifecycle.HiltViewModel()
 public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
     @org.jetbrains.annotations.NotNull()
@@ -40,15 +39,13 @@ public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
     @org.jetbrains.annotations.NotNull()
     private final com.example.memoreels.domain.usecase.GetThisDayVideosUseCase getThisDayVideos = null;
     @org.jetbrains.annotations.NotNull()
-    private final com.example.memoreels.data.ml.VideoTagger videoTagger = null;
-    @org.jetbrains.annotations.NotNull()
-    private final com.example.memoreels.data.ml.PhotoTagger photoTagger = null;
-    @org.jetbrains.annotations.NotNull()
     private final com.example.memoreels.data.datasource.PhotoDataSource photoDataSource = null;
     @org.jetbrains.annotations.NotNull()
     private final com.example.memoreels.data.datasource.FeedItemFactory feedItemFactory = null;
     @org.jetbrains.annotations.NotNull()
     private final com.example.memoreels.data.local.VideoTagDao videoTagDao = null;
+    @org.jetbrains.annotations.NotNull()
+    private final com.example.memoreels.data.local.MediaLocationDao mediaLocationDao = null;
     @org.jetbrains.annotations.NotNull()
     private final com.example.memoreels.data.preferences.UserPreferences userPreferences = null;
     @org.jetbrains.annotations.NotNull()
@@ -83,6 +80,18 @@ public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
     private final kotlinx.coroutines.flow.MutableStateFlow<java.lang.Boolean> _isPlaying = null;
     @org.jetbrains.annotations.NotNull()
     private final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> isPlaying = null;
+    
+    /**
+     * Auto-mute preference from DataStore.
+     */
+    @org.jetbrains.annotations.NotNull()
+    private final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> autoMute = null;
+    
+    /**
+     * Loop videos preference from DataStore.
+     */
+    @org.jetbrains.annotations.NotNull()
+    private final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> loopVideos = null;
     @org.jetbrains.annotations.NotNull()
     private final kotlinx.coroutines.flow.MutableStateFlow<java.util.Set<java.lang.String>> _favoriteUris = null;
     @org.jetbrains.annotations.NotNull()
@@ -110,11 +119,10 @@ public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
     com.example.memoreels.domain.usecase.ToggleFavoriteUseCase toggleFavorite, @org.jetbrains.annotations.NotNull()
     com.example.memoreels.domain.repository.VideoRepository repository, @org.jetbrains.annotations.NotNull()
     com.example.memoreels.domain.usecase.GetThisDayVideosUseCase getThisDayVideos, @org.jetbrains.annotations.NotNull()
-    com.example.memoreels.data.ml.VideoTagger videoTagger, @org.jetbrains.annotations.NotNull()
-    com.example.memoreels.data.ml.PhotoTagger photoTagger, @org.jetbrains.annotations.NotNull()
     com.example.memoreels.data.datasource.PhotoDataSource photoDataSource, @org.jetbrains.annotations.NotNull()
     com.example.memoreels.data.datasource.FeedItemFactory feedItemFactory, @org.jetbrains.annotations.NotNull()
     com.example.memoreels.data.local.VideoTagDao videoTagDao, @org.jetbrains.annotations.NotNull()
+    com.example.memoreels.data.local.MediaLocationDao mediaLocationDao, @org.jetbrains.annotations.NotNull()
     com.example.memoreels.data.preferences.UserPreferences userPreferences, @dagger.hilt.android.qualifiers.ApplicationContext()
     @org.jetbrains.annotations.NotNull()
     android.content.Context appContext) {
@@ -157,6 +165,22 @@ public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
         return null;
     }
     
+    /**
+     * Auto-mute preference from DataStore.
+     */
+    @org.jetbrains.annotations.NotNull()
+    public final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> getAutoMute() {
+        return null;
+    }
+    
+    /**
+     * Loop videos preference from DataStore.
+     */
+    @org.jetbrains.annotations.NotNull()
+    public final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> getLoopVideos() {
+        return null;
+    }
+    
     @org.jetbrains.annotations.NotNull()
     public final kotlinx.coroutines.flow.StateFlow<java.util.Set<java.lang.String>> getFavoriteUris() {
         return null;
@@ -183,7 +207,7 @@ public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
     }
     
     /**
-     * Loads photos + videos and builds the unified feed.
+     * Loads photos + videos and builds the unified feed with tag-based grouping.
      */
     private final void loadUnifiedFeed() {
     }
@@ -200,6 +224,18 @@ public final class VideoFeedViewModel extends androidx.lifecycle.ViewModel {
     }
     
     public final void toggleMute() {
+    }
+    
+    /**
+     * Persist auto-mute preference.
+     */
+    public final void setAutoMute(boolean enabled) {
+    }
+    
+    /**
+     * Persist loop videos preference.
+     */
+    public final void setLoopVideos(boolean enabled) {
     }
     
     public final void togglePlayPause() {

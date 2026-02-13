@@ -125,7 +125,7 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
 
   @Override
   public Object insertCluster(final FaceClusterEntity cluster,
-      final Continuation<? super Long> $completion) {
+      final Continuation<? super Long> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Long>() {
       @Override
       @NonNull
@@ -139,12 +139,12 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object insertFaceMedia(final List<FaceMediaEntity> entries,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -158,12 +158,12 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object updateCluster(final FaceClusterEntity cluster,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -177,12 +177,12 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object renameCluster(final long id, final String name,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg2) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -209,7 +209,7 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
           __preparedStmtOfRenameCluster.release(_stmt);
         }
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
@@ -298,7 +298,7 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
 
   @Override
   public Object countMediaForCluster(final long clusterId,
-      final Continuation<? super Integer> $completion) {
+      final Continuation<? super Integer> arg1) {
     final String _sql = "SELECT COUNT(*) FROM face_media WHERE clusterId = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -328,7 +328,7 @@ public final class FaceClusterDao_Impl implements FaceClusterDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @NonNull

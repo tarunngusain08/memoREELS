@@ -1,6 +1,7 @@
 package com.example.memoreels.ui.viewmodel
 
 import android.content.Context
+import android.location.Geocoder
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.ViewModel
@@ -11,11 +12,13 @@ import com.example.memoreels.data.model.MediaLocationEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,6 +30,8 @@ class MemoryMapViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "MemoryMapVM"
+        private const val GEOCODE_BATCH_SIZE = 50
+        private const val GEOCODE_DELAY_MS = 100L
     }
 
     private val _locations = MutableStateFlow<List<MediaLocationEntity>>(emptyList())
@@ -75,6 +80,10 @@ class MemoryMapViewModel @Inject constructor(
                         }
                     }
                 }
+
+                // Reverse-geocode locations that don't have a human-readable name yet
+                reverseGeocodeLocations()
+
                 // Load from DB
                 mediaLocationDao.getAll().collect { locs ->
                     _locations.value = locs
@@ -83,6 +92,51 @@ class MemoryMapViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to extract locations", e)
                 _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Uses Android's Geocoder to reverse-geocode stored lat/lng into
+     * human-readable place names. Batched and throttled to avoid rate limits.
+     */
+    private suspend fun reverseGeocodeLocations() {
+        withContext(Dispatchers.IO) {
+            try {
+                if (!Geocoder.isPresent()) return@withContext
+
+                val geocoder = Geocoder(context, Locale.getDefault())
+                // Only geocode locations that don't have a name yet
+                val allLocations = mediaLocationDao.getAllSync()
+                val toGeocode = allLocations
+                    .filter { it.locationName.isNullOrBlank() }
+                    .take(GEOCODE_BATCH_SIZE)
+
+                for (loc in toGeocode) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        val addresses = geocoder.getFromLocation(
+                            loc.latitude, loc.longitude, 1
+                        )
+                        if (!addresses.isNullOrEmpty()) {
+                            val addr = addresses[0]
+                            val name = listOfNotNull(
+                                addr.subLocality,
+                                addr.locality,
+                                addr.adminArea
+                            ).joinToString(", ")
+                            if (name.isNotBlank()) {
+                                mediaLocationDao.updateLocationName(loc.mediaUri, name)
+                            }
+                        }
+                        // Throttle to avoid Geocoder rate limits
+                        delay(GEOCODE_DELAY_MS)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Geocode failed for ${loc.mediaUri}", e)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Reverse geocoding batch failed", e)
             }
         }
     }

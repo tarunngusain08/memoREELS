@@ -6,6 +6,7 @@ import androidx.compose.material3.SliderDefaults;
 import androidx.compose.runtime.Composable;
 import androidx.compose.ui.Alignment;
 import androidx.compose.ui.Modifier;
+import androidx.compose.ui.input.pointer.PointerEventPass;
 import androidx.media3.exoplayer.ExoPlayer;
 import java.util.Locale;
 

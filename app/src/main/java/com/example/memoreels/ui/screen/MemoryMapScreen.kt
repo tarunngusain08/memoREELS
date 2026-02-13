@@ -126,11 +126,13 @@ fun MemoryMapScreen(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
-                            Text(
-                                text = "%.4f, %.4f".format(loc.latitude, loc.longitude),
-                                color = Color.White.copy(alpha = 0.4f),
-                                fontSize = 11.sp
-                            )
+                            if (loc.locationName != null) {
+                                Text(
+                                    text = "%.4f, %.4f".format(loc.latitude, loc.longitude),
+                                    color = Color.White.copy(alpha = 0.4f),
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
                         // Location pin icon
