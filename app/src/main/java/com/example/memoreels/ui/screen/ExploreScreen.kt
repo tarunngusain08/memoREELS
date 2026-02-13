@@ -1,6 +1,7 @@
 package com.example.memoreels.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,8 +22,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,7 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.memoreels.domain.model.Video
-import com.example.memoreels.ui.components.VideoThumbnail
+import com.example.memoreels.ui.components.MediaThumbnail
 import com.example.memoreels.ui.viewmodel.ExploreViewModel
 import com.example.memoreels.ui.viewmodel.VideoCollection
 
@@ -62,7 +65,7 @@ fun ExploreScreen(
     val pagingItems = viewModel.searchResults.collectAsLazyPagingItems()
     val collections by viewModel.collections.collectAsState()
     val taggingProgress by viewModel.taggingProgress.collectAsState()
-    val videoOfTheDay by viewModel.videoOfTheDay.collectAsState()
+    val memoryOfMoment by viewModel.memoryOfMoment.collectAsState()
     val tagSearchResults by viewModel.tagSearchResults.collectAsState()
 
     Column(
@@ -78,7 +81,7 @@ fun ExploreScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = "Analyzing videos... ${progress.processed}/${progress.total}",
+                    text = "Analyzing memories... ${progress.processed}/${progress.total}",
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp
                 )
@@ -95,32 +98,29 @@ fun ExploreScreen(
             }
         }
 
-        // Collections row (with Video of the Day as first item)
-        if (collections.isNotEmpty() || videoOfTheDay != null) {
-            Text(
-                text = "Collections",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
-            )
+        // Instagram-style circular category tiles
+        if (collections.isNotEmpty() || memoryOfMoment != null) {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Video of the Day card
-                videoOfTheDay?.let { uri ->
+                // Memory of the Moment as special first bubble
+                memoryOfMoment?.let { memory ->
                     item {
-                        VideoOfTheDayCard(
-                            videoUri = uri,
-                            onClick = { onVideoUriClick(uri) }
+                        CategoryBubble(
+                            label = "Memory",
+                            thumbnailUri = memory.uri,
+                            isSpecial = true,
+                            onClick = { onVideoUriClick(memory.uri) }
                         )
                     }
                 }
-                // Collection cards
+                // Category bubbles for collections
                 items(collections) { collection ->
-                    CollectionCard(
-                        collection = collection,
+                    CategoryBubble(
+                        label = collection.tag,
+                        thumbnailUri = collection.thumbnailUri,
+                        isSpecial = false,
                         onClick = { onCollectionClick(collection.tag) }
                     )
                 }
@@ -131,9 +131,9 @@ fun ExploreScreen(
         OutlinedTextField(
             value = query,
             onValueChange = { viewModel.onQueryChange(it) },
-            placeholder = { Text("Search videos...", color = Color.Gray) },
+            placeholder = { Text("Search memories by tag...", color = Color.Gray) },
             leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray)
             },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
@@ -146,10 +146,10 @@ fun ExploreScreen(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
         )
 
-        // Search results / all videos
+        // Search results / all content
         when {
             pagingItems.loadState.refresh is LoadState.Loading -> {
                 Box(
@@ -159,6 +159,34 @@ fun ExploreScreen(
                     CircularProgressIndicator(color = Color.White)
                 }
             }
+            pagingItems.loadState.refresh is LoadState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Something went wrong",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 16.sp,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        Button(
+                            onClick = { pagingItems.retry() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE53935)
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Retry",
+                                tint = Color.White
+                            )
+                            Text("  Retry", color = Color.White)
+                        }
+                    }
+                }
+            }
             pagingItems.itemCount == 0 && tagSearchResults.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -166,7 +194,7 @@ fun ExploreScreen(
                 ) {
                     Text(
                         text = if (query.isNotBlank()) "No results for \"$query\""
-                        else "Search your video memories",
+                        else "Search your memories by tags like mountain, sunset, river...",
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 16.sp,
                         textAlign = TextAlign.Center,
@@ -196,7 +224,7 @@ fun ExploreScreen(
                         }
                         items(tagSearchResults.size) { index ->
                             TagSearchResultItem(
-                                videoUri = tagSearchResults[index],
+                                mediaUri = tagSearchResults[index],
                                 onClick = { onVideoUriClick(tagSearchResults[index]) }
                             )
                         }
@@ -232,164 +260,87 @@ fun ExploreScreen(
     }
 }
 
-// --- Video of the Day card ---
+// --- Instagram-style circular category bubble ---
 
 @Composable
-private fun VideoOfTheDayCard(
-    videoUri: String,
+private fun CategoryBubble(
+    label: String,
+    thumbnailUri: String?,
+    isSpecial: Boolean,
     onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
-            .width(143.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .width(72.dp)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val borderBrush = if (isSpecial) {
+            Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFFFFD54F),
+                    Color(0xFFFFA726),
+                    Color(0xFFE53935)
+                )
+            )
+        } else {
+            Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFFE53935),
+                    Color(0xFFAD1457),
+                    Color(0xFF6A1B9A)
+                )
+            )
+        }
+
         Box(
             modifier = Modifier
-                .width(143.dp)
-                .height(198.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color.DarkGray)
+                .size(64.dp)
+                .border(width = 2.dp, brush = borderBrush, shape = CircleShape)
+                .padding(3.dp)
+                .clip(CircleShape)
+                .background(Color.DarkGray),
+            contentAlignment = Alignment.Center
         ) {
-            VideoThumbnail(
-                contentUri = videoUri,
-                contentDescription = "Video of the Day",
-                modifier = Modifier.fillMaxSize()
-            )
-            // Golden gradient overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFFFFD700).copy(alpha = 0.15f),
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.7f)
-                            )
-                        )
-                    )
-            )
-            // Star badge at top-right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(28.dp)
-                    .background(Color(0xFFFFD700), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
+            if (thumbnailUri != null) {
+                MediaThumbnail(
+                    contentUri = thumbnailUri,
+                    contentDescription = label,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            } else {
                 Icon(
                     Icons.Default.Star,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-            // Label at bottom
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(10.dp)
-            ) {
-                Text(
-                    text = "Video of",
-                    color = Color(0xFFFFD700),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 14.sp
-                )
-                Text(
-                    text = "the Day",
-                    color = Color(0xFFFFD700),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 20.sp
+                    contentDescription = label,
+                    tint = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
+
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }
 
-// --- Collection card (143x198dp, 10% larger) ---
-
-@Composable
-private fun CollectionCard(
-    collection: VideoCollection,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(143.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .width(143.dp)
-                .height(198.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color.DarkGray)
-        ) {
-            collection.thumbnailUri?.let { uri ->
-                VideoThumbnail(
-                    contentUri = uri,
-                    contentDescription = "${collection.tag} collection, ${collection.videoCount} videos",
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            // Gradient overlay at the bottom for readability
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.3f),
-                                Color.Black.copy(alpha = 0.75f)
-                            ),
-                            startY = 0f,
-                            endY = Float.POSITIVE_INFINITY
-                        )
-                    )
-            )
-            // Text at the bottom
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(10.dp)
-            ) {
-                Text(
-                    text = collection.tag,
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp
-                )
-                Text(
-                    text = "${collection.videoCount} ${if (collection.videoCount == 1) "video" else "videos"}",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-        }
-    }
-}
-
-// --- Tag search result item ---
+// --- Tag search result item (now uses MediaThumbnail) ---
 
 @Composable
 private fun TagSearchResultItem(
-    videoUri: String,
+    mediaUri: String,
     onClick: () -> Unit
 ) {
+    val isVideo = mediaUri.contains("/video/")
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -398,27 +349,29 @@ private fun TagSearchResultItem(
             .background(Color.DarkGray)
             .clickable(onClick = onClick)
     ) {
-        VideoThumbnail(
-            contentUri = videoUri,
-            contentDescription = null,
+        MediaThumbnail(
+            contentUri = mediaUri,
+            contentDescription = if (isVideo) "Video thumbnail" else "Photo thumbnail",
             modifier = Modifier.fillMaxSize()
         )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = Color.White
-            )
+        if (isVideo) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play video",
+                    tint = Color.White
+                )
+            }
         }
     }
 }
 
-// --- Filename search result item ---
+// --- Filename search result item (now uses MediaThumbnail) ---
 
 @Composable
 private fun SearchVideoItem(
@@ -432,7 +385,7 @@ private fun SearchVideoItem(
             .background(Color.DarkGray, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
     ) {
-        VideoThumbnail(
+        MediaThumbnail(
             contentUri = video.uri,
             contentDescription = video.displayName,
             modifier = Modifier.fillMaxSize()
@@ -445,7 +398,7 @@ private fun SearchVideoItem(
         ) {
             Icon(
                 imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
+                contentDescription = "Play video",
                 tint = Color.White
             )
         }

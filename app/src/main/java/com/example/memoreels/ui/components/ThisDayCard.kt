@@ -38,7 +38,7 @@ import com.example.memoreels.domain.model.Video
 
 /**
  * A floating card that appears at the top of the main feed
- * when there are videos from today's date in previous years.
+ * when there are media from today's date in previous years.
  */
 @Composable
 fun ThisDayCard(
@@ -113,7 +113,7 @@ fun ThisDayCard(
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable { onVideoClick(video) }
                         ) {
-                            VideoThumbnail(
+                            MediaThumbnail(
                                 contentUri = video.uri,
                                 contentDescription = video.displayName
                             )

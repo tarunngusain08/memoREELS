@@ -1,11 +1,14 @@
 package com.example.memoreels.ui.screen
 
 import android.net.Uri
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -18,12 +21,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,9 +37,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.memoreels.ui.components.MediaThumbnail
 import com.example.memoreels.ui.components.VideoPlayer
 import com.example.memoreels.ui.viewmodel.ExploreViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -54,24 +63,38 @@ fun CollectionFeedScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val videoUris by viewModel.getVideosForTag(tag).collectAsState(initial = emptyList())
 
+    val isPlayerReleased = remember { mutableStateOf(false) }
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .build(),
+                /* handleAudioFocus= */ true
+            )
             repeatMode = Player.REPEAT_MODE_ONE
             playWhenReady = true
         }
     }
 
     DisposableEffect(Unit) {
-        onDispose { exoPlayer.release() }
+        onDispose {
+            isPlayerReleased.value = true
+            exoPlayer.release()
+        }
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
-                Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = true
-                else -> {}
-            }
+            if (isPlayerReleased.value) return@LifecycleEventObserver
+            try {
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
+                    Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = true
+                    else -> {}
+                }
+            } catch (_: Exception) { }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -99,42 +122,76 @@ fun CollectionFeedScreen(
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect { page ->
-                if (page < videoUris.size) {
-                    exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(videoUris[page])))
+                if (isPlayerReleased.value) return@collect
+                val uri = videoUris.getOrNull(page) ?: return@collect
+                try {
+                    exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
                     exoPlayer.prepare()
                     exoPlayer.playWhenReady = true
-                }
+                } catch (_: Exception) { }
             }
     }
 
     // Load first video when URIs arrive
     LaunchedEffect(videoUris) {
+        if (isPlayerReleased.value) return@LaunchedEffect
         if (videoUris.isNotEmpty() && exoPlayer.mediaItemCount == 0) {
             val idx = startIndex.coerceIn(0, videoUris.size - 1)
-            exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(videoUris[idx])))
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
+            try {
+                exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(videoUris[idx])))
+                exoPlayer.prepare()
+                exoPlayer.playWhenReady = true
+            } catch (_: Exception) { }
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         VerticalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            beyondBoundsPageCount = 1,
+            flingBehavior = PagerDefaults.flingBehavior(
+                state = pagerState,
+                snapAnimationSpec = tween(
+                    durationMillis = 300,
+                    easing = FastOutSlowInEasing
+                )
+            )
         ) { page ->
             val isCurrent = pagerState.settledPage == page
+            val pageOffset = (
+                (pagerState.currentPage - page) +
+                    pagerState.currentPageOffsetFraction
+                )
+            val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = lerp(0.5f, 1f, 1f - absOffset)
+                        scaleX = lerp(0.92f, 1f, 1f - absOffset)
+                        scaleY = lerp(0.92f, 1f, 1f - absOffset)
+                    }
                     .background(Color.Black)
             ) {
                 if (isCurrent) {
                     VideoPlayer(
                         exoPlayer = exoPlayer,
                         onTap = {
-                            exoPlayer.playWhenReady = !exoPlayer.playWhenReady
+                            if (!isPlayerReleased.value) {
+                                try {
+                                    exoPlayer.playWhenReady = !exoPlayer.playWhenReady
+                                } catch (_: Exception) { }
+                            }
                         },
                         onDoubleTap = { }
+                    )
+                } else if (page < videoUris.size) {
+                    MediaThumbnail(
+                        contentUri = videoUris[page],
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }

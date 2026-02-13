@@ -25,22 +25,22 @@ import javax.inject.Provider;
     "cast"
 })
 public final class AppModule_ProvideVideoTagDaoFactory implements Factory<VideoTagDao> {
-  private final Provider<AppDatabase> databaseProvider;
+  private final Provider<AppDatabase> dbProvider;
 
-  public AppModule_ProvideVideoTagDaoFactory(Provider<AppDatabase> databaseProvider) {
-    this.databaseProvider = databaseProvider;
+  public AppModule_ProvideVideoTagDaoFactory(Provider<AppDatabase> dbProvider) {
+    this.dbProvider = dbProvider;
   }
 
   @Override
   public VideoTagDao get() {
-    return provideVideoTagDao(databaseProvider.get());
+    return provideVideoTagDao(dbProvider.get());
   }
 
-  public static AppModule_ProvideVideoTagDaoFactory create(Provider<AppDatabase> databaseProvider) {
-    return new AppModule_ProvideVideoTagDaoFactory(databaseProvider);
+  public static AppModule_ProvideVideoTagDaoFactory create(Provider<AppDatabase> dbProvider) {
+    return new AppModule_ProvideVideoTagDaoFactory(dbProvider);
   }
 
-  public static VideoTagDao provideVideoTagDao(AppDatabase database) {
-    return Preconditions.checkNotNullFromProvides(AppModule.INSTANCE.provideVideoTagDao(database));
+  public static VideoTagDao provideVideoTagDao(AppDatabase db) {
+    return Preconditions.checkNotNullFromProvides(AppModule.INSTANCE.provideVideoTagDao(db));
   }
 }

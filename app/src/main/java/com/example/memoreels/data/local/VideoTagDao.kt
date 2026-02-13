@@ -41,6 +41,14 @@ interface VideoTagDao {
     /** All URIs that have already been processed (at least one tag). */
     @Query("SELECT DISTINCT videoUri FROM video_tags")
     suspend fun getProcessedUris(): List<String>
+
+    /** All tags with their associated URIs for tag-based grouping. */
+    @Query("SELECT * FROM video_tags ORDER BY confidence DESC")
+    suspend fun getAllTags(): List<VideoTagEntity>
+
+    /** Synchronous tag search for mood filtering. */
+    @Query("SELECT DISTINCT videoUri FROM video_tags WHERE LOWER(tag) LIKE :query")
+    suspend fun searchByTagDirect(query: String): List<String>
 }
 
 /** Simple projection for tag counts. */

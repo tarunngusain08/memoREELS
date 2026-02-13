@@ -2,6 +2,7 @@ package com.example.memoreels.ui.screen;
 
 import android.net.Uri;
 import androidx.compose.foundation.ExperimentalFoundationApi;
+import androidx.compose.foundation.pager.PagerDefaults;
 import androidx.compose.material.icons.Icons;
 import androidx.compose.runtime.Composable;
 import androidx.compose.ui.Alignment;
@@ -9,6 +10,8 @@ import androidx.compose.ui.Modifier;
 import androidx.compose.ui.text.font.FontWeight;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
+import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;

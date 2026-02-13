@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.memoreels.domain.model.Favorite
 import com.example.memoreels.domain.model.Video
-import com.example.memoreels.ui.components.VideoThumbnail
+import com.example.memoreels.ui.components.MediaThumbnail
 import com.example.memoreels.ui.viewmodel.FavoritesViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -67,7 +67,7 @@ fun FavoritesScreen(
                 .background(Color.Black)
         ) {
             items(favorites) { favorite ->
-                FavoriteVideoItem(
+                FavoriteMediaItem(
                     favorite = favorite,
                     onClick = { onVideoClick(favorite.toVideo()) }
                 )
@@ -77,10 +77,12 @@ fun FavoritesScreen(
 }
 
 @Composable
-private fun FavoriteVideoItem(
+private fun FavoriteMediaItem(
     favorite: Favorite,
     onClick: () -> Unit
 ) {
+    val isVideo = favorite.videoUri.contains("/video/")
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -88,23 +90,25 @@ private fun FavoriteVideoItem(
             .padding(4.dp)
             .clickable(onClick = onClick)
     ) {
-        VideoThumbnail(
+        MediaThumbnail(
             contentUri = favorite.videoUri,
-            contentDescription = "Video thumbnail",
+            contentDescription = if (isVideo) "Video thumbnail" else "Photo thumbnail",
             modifier = Modifier.fillMaxSize()
         )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = Color.White,
+        // Only show play icon overlay for videos
+        if (isVideo) {
+            Box(
                 modifier = Modifier
-            )
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play video",
+                    tint = Color.White
+                )
+            }
         }
         Text(
             text = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())

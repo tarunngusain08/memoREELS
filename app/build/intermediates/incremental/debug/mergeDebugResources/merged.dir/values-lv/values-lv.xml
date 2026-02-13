@@ -127,6 +127,8 @@
     <string name="exo_track_surround_5_point_1">5.1 ieskaujošā skaņa</string>
     <string name="exo_track_surround_7_point_1">7.1 ieskaujošā skaņa</string>
     <string name="exo_track_unknown">Nezināms</string>
+    <string msgid="2863935784364843033" name="glance_error_layout_text">"Atrodiet precīzu kļūdu ar rīka "<b><tt>"adb logcat"</tt></b>" palīdzību, izmantojot meklēšanas vaicājumu "<b><tt>"GlanceAppWidget"</tt></b>"."</string>
+    <string msgid="3631961919234443531" name="glance_error_layout_title"><b>"Glance lietotnes logrīka kļūda"</b></string>
     <string msgid="6827826412747255547" name="in_progress">"Notiek apstrāde"</string>
     <string msgid="7933458017204019916" name="indeterminate">"Daļēji atzīmēta"</string>
     <string msgid="2988463736136100848" name="m3c_bottom_sheet_collapse_description">"Sakļaut ekrāna apakšdaļas lapu"</string>
@@ -186,6 +188,7 @@
     <string msgid="1805687647081129904" name="m3c_tooltip_long_press_label">"Rādīt rīka padomu"</string>
     <string msgid="5460405025248574620" name="m3c_tooltip_pane_description">"Rīka padoms"</string>
     <string msgid="542007171693138492" name="navigation_menu">"Navigācijas izvēlne"</string>
+    <string name="nearby_device_type_tablet">planšetdators</string>
     <string msgid="6610465462668679431" name="not_selected">"Nav atlasīts"</string>
     <string msgid="875452955155264703" name="off">"Izslēgts"</string>
     <string msgid="8655164131929253426" name="on">"Ieslēgts"</string>

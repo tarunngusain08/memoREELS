@@ -4,7 +4,24 @@
             "outputFile": "com.example.memoreels.app-mergeDebugResources-2:/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "/private/var/folders/yb/r39brhhs0l12fxv04cgqtwjh0000gn/T/cursor-sandbox-cache/cc4bfa79210a2d75e5dfe32b3eba2cb9/gradle/caches/8.9/transforms/d244aff0e138a5253edea4ee08f9253e/transformed/appcompat-1.6.1/res/values-v23/values-v23.xml",
+                    "source": "/private/var/folders/yw/2qw_kxv53g794sdl6_w9ytp80000gp/T/cursor-sandbox-cache/62ed3c50308bc6484c74b090b2b111a3/gradle/caches/8.9/transforms/b8cd68ed6b07fabd03b83e8128b5efe6/transformed/glance-appwidget-1.0.0/res/values-v23/values-v23.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    },
+                    "to": {
+                        "startLines": "4",
+                        "startColumns": "4",
+                        "startOffsets": "184",
+                        "endColumns": "55",
+                        "endOffsets": "235"
+                    }
+                },
+                {
+                    "source": "/private/var/folders/yw/2qw_kxv53g794sdl6_w9ytp80000gp/T/cursor-sandbox-cache/62ed3c50308bc6484c74b090b2b111a3/gradle/caches/8.9/transforms/d244aff0e138a5253edea4ee08f9253e/transformed/appcompat-1.6.1/res/values-v23/values-v23.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,20,34,35,36,39,43,44,45,46",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -12,6 +29,24 @@
                         "endLines": "2,3,4,5,19,33,34,35,38,42,43,44,45,49",
                         "endColumns": "134,134,74,86,12,12,118,126,12,12,114,106,112,12",
                         "endOffsets": "185,320,395,482,1220,1970,2089,2216,2438,2662,2777,2884,2997,3227"
+                    },
+                    "to": {
+                        "startLines": "5,6,7,8,9,23,37,38,39,42,46,47,48,49",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "240,375,510,585,672,1410,2160,2279,2406,2628,2852,2967,3074,3187",
+                        "endLines": "5,6,7,8,22,36,37,38,41,45,46,47,48,52",
+                        "endColumns": "134,134,74,86,12,12,118,126,12,12,114,106,112,12",
+                        "endOffsets": "370,505,580,667,1405,2155,2274,2401,2623,2847,2962,3069,3182,3412"
+                    }
+                },
+                {
+                    "source": "/private/var/folders/yw/2qw_kxv53g794sdl6_w9ytp80000gp/T/cursor-sandbox-cache/62ed3c50308bc6484c74b090b2b111a3/gradle/caches/8.9/transforms/b9c44d863ee43827356f1c009a302843/transformed/work-runtime-2.9.0/res/values-v23/values-v23.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,121",
+                        "endColumns": "65,62",
+                        "endOffsets": "116,179"
                     }
                 }
             ]

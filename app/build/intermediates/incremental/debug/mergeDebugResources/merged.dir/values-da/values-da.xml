@@ -125,6 +125,8 @@
     <string name="exo_track_surround_5_point_1">5.1 surround sound</string>
     <string name="exo_track_surround_7_point_1">7.1 surroundsound</string>
     <string name="exo_track_unknown">Ukendt</string>
+    <string msgid="2863935784364843033" name="glance_error_layout_text">"Brug "<b><tt>"adb logcat"</tt></b>" til at tjekke den specifikke fejl ved at søge efter "<b><tt>"GlanceAppWidget"</tt></b></string>
+    <string msgid="3631961919234443531" name="glance_error_layout_title"><b>"Fejl i appwidgetten Glance"</b></string>
     <string msgid="6827826412747255547" name="in_progress">"I gang"</string>
     <string msgid="7933458017204019916" name="indeterminate">"Delvist markeret"</string>
     <string msgid="2988463736136100848" name="m3c_bottom_sheet_collapse_description">"Skjul felt i bunden"</string>
@@ -184,6 +186,7 @@
     <string msgid="1805687647081129904" name="m3c_tooltip_long_press_label">"Se værktøjstip"</string>
     <string msgid="5460405025248574620" name="m3c_tooltip_pane_description">"Værktøjstip"</string>
     <string msgid="542007171693138492" name="navigation_menu">"Navigationsmenu"</string>
+    <string name="nearby_device_type_tablet">tablet</string>
     <string msgid="6610465462668679431" name="not_selected">"Ikke valgt"</string>
     <string msgid="875452955155264703" name="off">"Fra"</string>
     <string msgid="8655164131929253426" name="on">"Til"</string>

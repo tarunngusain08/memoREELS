@@ -35,7 +35,10 @@ fun OnboardingScreen(
     val context = LocalContext.current
     val permissionsState = rememberMultiplePermissionsState(
         permissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            listOf(android.Manifest.permission.READ_MEDIA_VIDEO)
+            listOf(
+                android.Manifest.permission.READ_MEDIA_VIDEO,
+                android.Manifest.permission.READ_MEDIA_IMAGES
+            )
         } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             listOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
         } else {
@@ -76,8 +79,8 @@ fun OnboardingScreen(
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Rediscover your local videos in a Reels-style feed. " +
-                    "We need access to your videos to show them - all data stays on your device.",
+                text = "Rediscover your local videos and photos in a Reels-style feed. " +
+                    "We need access to your media to show them - all data stays on your device.",
                 color = Color.White.copy(alpha = 0.9f),
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center,

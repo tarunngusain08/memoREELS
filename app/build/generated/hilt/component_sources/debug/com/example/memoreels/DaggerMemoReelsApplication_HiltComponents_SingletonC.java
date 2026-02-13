@@ -2,32 +2,80 @@ package com.example.memoreels;
 
 import android.app.Activity;
 import android.app.Service;
+import android.content.Context;
 import android.view.View;
+import androidx.datastore.core.DataStore;
+import androidx.datastore.preferences.core.Preferences;
 import androidx.fragment.app.Fragment;
+import androidx.hilt.work.HiltWorkerFactory;
+import androidx.hilt.work.WorkerAssistedFactory;
+import androidx.hilt.work.WorkerFactoryModule_ProvideFactoryFactory;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
+import androidx.work.ListenableWorker;
+import androidx.work.WorkerParameters;
+import com.example.memoreels.data.datasource.FeedItemFactory;
+import com.example.memoreels.data.datasource.PhotoDataSource;
 import com.example.memoreels.data.datasource.VideoPagingSourceFactory;
 import com.example.memoreels.data.local.AppDatabase;
+import com.example.memoreels.data.local.FaceClusterDao;
 import com.example.memoreels.data.local.FavoritesDao;
+import com.example.memoreels.data.local.JournalDao;
+import com.example.memoreels.data.local.MediaHashDao;
+import com.example.memoreels.data.local.MediaLocationDao;
+import com.example.memoreels.data.local.TimeCapsuleDao;
 import com.example.memoreels.data.local.VideoTagDao;
+import com.example.memoreels.data.local.VoiceNoteDao;
+import com.example.memoreels.data.ml.PhotoTagger;
 import com.example.memoreels.data.ml.VideoTagger;
+import com.example.memoreels.data.preferences.UserPreferences;
 import com.example.memoreels.data.repository.VideoRepositoryImpl;
 import com.example.memoreels.di.AppModule_ProvideAppDatabaseFactory;
+import com.example.memoreels.di.AppModule_ProvideDataStoreFactory;
+import com.example.memoreels.di.AppModule_ProvideFaceClusterDaoFactory;
 import com.example.memoreels.di.AppModule_ProvideFavoritesDaoFactory;
+import com.example.memoreels.di.AppModule_ProvideJournalDaoFactory;
+import com.example.memoreels.di.AppModule_ProvideMediaHashDaoFactory;
+import com.example.memoreels.di.AppModule_ProvideMediaLocationDaoFactory;
+import com.example.memoreels.di.AppModule_ProvideTimeCapsuleDaoFactory;
 import com.example.memoreels.di.AppModule_ProvideVideoPagingSourceFactoryFactory;
 import com.example.memoreels.di.AppModule_ProvideVideoRepositoryFactory;
 import com.example.memoreels.di.AppModule_ProvideVideoTagDaoFactory;
+import com.example.memoreels.di.AppModule_ProvideVoiceNoteDaoFactory;
 import com.example.memoreels.domain.repository.VideoRepository;
 import com.example.memoreels.domain.usecase.GetThisDayVideosUseCase;
 import com.example.memoreels.domain.usecase.GetVideosUseCase;
 import com.example.memoreels.domain.usecase.ToggleFavoriteUseCase;
 import com.example.memoreels.ui.MainActivity;
+import com.example.memoreels.ui.MainActivity_MembersInjector;
+import com.example.memoreels.ui.viewmodel.DuplicateCleanerViewModel;
+import com.example.memoreels.ui.viewmodel.DuplicateCleanerViewModel_HiltModules;
 import com.example.memoreels.ui.viewmodel.ExploreViewModel;
 import com.example.memoreels.ui.viewmodel.ExploreViewModel_HiltModules;
 import com.example.memoreels.ui.viewmodel.FavoritesViewModel;
 import com.example.memoreels.ui.viewmodel.FavoritesViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.HighlightReelsViewModel;
+import com.example.memoreels.ui.viewmodel.HighlightReelsViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.JournalViewModel;
+import com.example.memoreels.ui.viewmodel.JournalViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.MemoryMapViewModel;
+import com.example.memoreels.ui.viewmodel.MemoryMapViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.MoodFeedViewModel;
+import com.example.memoreels.ui.viewmodel.MoodFeedViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.NearbySharingViewModel;
+import com.example.memoreels.ui.viewmodel.NearbySharingViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.PeopleAlbumsViewModel;
+import com.example.memoreels.ui.viewmodel.PeopleAlbumsViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.PhotoFeedViewModel;
+import com.example.memoreels.ui.viewmodel.PhotoFeedViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel;
+import com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel_HiltModules;
 import com.example.memoreels.ui.viewmodel.VideoFeedViewModel;
 import com.example.memoreels.ui.viewmodel.VideoFeedViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.VoiceNoteViewModel;
+import com.example.memoreels.ui.viewmodel.VoiceNoteViewModel_HiltModules;
+import com.example.memoreels.widget.DailyMemoryWorker;
+import com.example.memoreels.widget.DailyMemoryWorker_AssistedFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import dagger.hilt.android.ActivityRetainedLifecycle;
@@ -52,6 +100,7 @@ import dagger.internal.KeepFieldType;
 import dagger.internal.LazyClassKeyMap;
 import dagger.internal.Preconditions;
 import dagger.internal.Provider;
+import dagger.internal.SingleCheck;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.Generated;
@@ -379,6 +428,7 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     @Override
     public void injectMainActivity(MainActivity mainActivity) {
+      injectMainActivity2(mainActivity);
     }
 
     @Override
@@ -388,7 +438,7 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     @Override
     public Map<Class<?>, Boolean> getViewModelKeys() {
-      return LazyClassKeyMap.<Boolean>of(ImmutableMap.<String, Boolean>of(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_ExploreViewModel, ExploreViewModel_HiltModules.KeyModule.provide(), LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_FavoritesViewModel, FavoritesViewModel_HiltModules.KeyModule.provide(), LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_VideoFeedViewModel, VideoFeedViewModel_HiltModules.KeyModule.provide()));
+      return LazyClassKeyMap.<Boolean>of(ImmutableMap.<String, Boolean>builderWithExpectedSize(13).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_DuplicateCleanerViewModel, DuplicateCleanerViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_ExploreViewModel, ExploreViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_FavoritesViewModel, FavoritesViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_HighlightReelsViewModel, HighlightReelsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_JournalViewModel, JournalViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_MemoryMapViewModel, MemoryMapViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_MoodFeedViewModel, MoodFeedViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_NearbySharingViewModel, NearbySharingViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_PeopleAlbumsViewModel, PeopleAlbumsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_PhotoFeedViewModel, PhotoFeedViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_TimeCapsuleViewModel, TimeCapsuleViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_VideoFeedViewModel, VideoFeedViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_VoiceNoteViewModel, VoiceNoteViewModel_HiltModules.KeyModule.provide()).build());
     }
 
     @Override
@@ -406,22 +456,77 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
       return new ViewCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl);
     }
 
+    private MainActivity injectMainActivity2(MainActivity instance) {
+      MainActivity_MembersInjector.injectUserPreferences(instance, singletonCImpl.userPreferencesProvider.get());
+      return instance;
+    }
+
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
+      static String com_example_memoreels_ui_viewmodel_PhotoFeedViewModel = "com.example.memoreels.ui.viewmodel.PhotoFeedViewModel";
+
       static String com_example_memoreels_ui_viewmodel_FavoritesViewModel = "com.example.memoreels.ui.viewmodel.FavoritesViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_HighlightReelsViewModel = "com.example.memoreels.ui.viewmodel.HighlightReelsViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_VoiceNoteViewModel = "com.example.memoreels.ui.viewmodel.VoiceNoteViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_MoodFeedViewModel = "com.example.memoreels.ui.viewmodel.MoodFeedViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_DuplicateCleanerViewModel = "com.example.memoreels.ui.viewmodel.DuplicateCleanerViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_MemoryMapViewModel = "com.example.memoreels.ui.viewmodel.MemoryMapViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_VideoFeedViewModel = "com.example.memoreels.ui.viewmodel.VideoFeedViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_JournalViewModel = "com.example.memoreels.ui.viewmodel.JournalViewModel";
 
       static String com_example_memoreels_ui_viewmodel_ExploreViewModel = "com.example.memoreels.ui.viewmodel.ExploreViewModel";
 
-      static String com_example_memoreels_ui_viewmodel_VideoFeedViewModel = "com.example.memoreels.ui.viewmodel.VideoFeedViewModel";
+      static String com_example_memoreels_ui_viewmodel_PeopleAlbumsViewModel = "com.example.memoreels.ui.viewmodel.PeopleAlbumsViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_TimeCapsuleViewModel = "com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_NearbySharingViewModel = "com.example.memoreels.ui.viewmodel.NearbySharingViewModel";
+
+      @KeepFieldType
+      PhotoFeedViewModel com_example_memoreels_ui_viewmodel_PhotoFeedViewModel2;
 
       @KeepFieldType
       FavoritesViewModel com_example_memoreels_ui_viewmodel_FavoritesViewModel2;
 
       @KeepFieldType
-      ExploreViewModel com_example_memoreels_ui_viewmodel_ExploreViewModel2;
+      HighlightReelsViewModel com_example_memoreels_ui_viewmodel_HighlightReelsViewModel2;
+
+      @KeepFieldType
+      VoiceNoteViewModel com_example_memoreels_ui_viewmodel_VoiceNoteViewModel2;
+
+      @KeepFieldType
+      MoodFeedViewModel com_example_memoreels_ui_viewmodel_MoodFeedViewModel2;
+
+      @KeepFieldType
+      DuplicateCleanerViewModel com_example_memoreels_ui_viewmodel_DuplicateCleanerViewModel2;
+
+      @KeepFieldType
+      MemoryMapViewModel com_example_memoreels_ui_viewmodel_MemoryMapViewModel2;
 
       @KeepFieldType
       VideoFeedViewModel com_example_memoreels_ui_viewmodel_VideoFeedViewModel2;
+
+      @KeepFieldType
+      JournalViewModel com_example_memoreels_ui_viewmodel_JournalViewModel2;
+
+      @KeepFieldType
+      ExploreViewModel com_example_memoreels_ui_viewmodel_ExploreViewModel2;
+
+      @KeepFieldType
+      PeopleAlbumsViewModel com_example_memoreels_ui_viewmodel_PeopleAlbumsViewModel2;
+
+      @KeepFieldType
+      TimeCapsuleViewModel com_example_memoreels_ui_viewmodel_TimeCapsuleViewModel2;
+
+      @KeepFieldType
+      NearbySharingViewModel com_example_memoreels_ui_viewmodel_NearbySharingViewModel2;
     }
   }
 
@@ -432,11 +537,31 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     private final ViewModelCImpl viewModelCImpl = this;
 
+    private Provider<DuplicateCleanerViewModel> duplicateCleanerViewModelProvider;
+
     private Provider<ExploreViewModel> exploreViewModelProvider;
 
     private Provider<FavoritesViewModel> favoritesViewModelProvider;
 
+    private Provider<HighlightReelsViewModel> highlightReelsViewModelProvider;
+
+    private Provider<JournalViewModel> journalViewModelProvider;
+
+    private Provider<MemoryMapViewModel> memoryMapViewModelProvider;
+
+    private Provider<MoodFeedViewModel> moodFeedViewModelProvider;
+
+    private Provider<NearbySharingViewModel> nearbySharingViewModelProvider;
+
+    private Provider<PeopleAlbumsViewModel> peopleAlbumsViewModelProvider;
+
+    private Provider<PhotoFeedViewModel> photoFeedViewModelProvider;
+
+    private Provider<TimeCapsuleViewModel> timeCapsuleViewModelProvider;
+
     private Provider<VideoFeedViewModel> videoFeedViewModelProvider;
+
+    private Provider<VoiceNoteViewModel> voiceNoteViewModelProvider;
 
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
         ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
@@ -463,14 +588,24 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
     @SuppressWarnings("unchecked")
     private void initialize(final SavedStateHandle savedStateHandleParam,
         final ViewModelLifecycle viewModelLifecycleParam) {
-      this.exploreViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
-      this.favoritesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
-      this.videoFeedViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.duplicateCleanerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
+      this.exploreViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
+      this.favoritesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.highlightReelsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
+      this.journalViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
+      this.memoryMapViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.moodFeedViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
+      this.nearbySharingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
+      this.peopleAlbumsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
+      this.photoFeedViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
+      this.timeCapsuleViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 10);
+      this.videoFeedViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 11);
+      this.voiceNoteViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 12);
     }
 
     @Override
     public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(ImmutableMap.<String, javax.inject.Provider<ViewModel>>of(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_ExploreViewModel, ((Provider) exploreViewModelProvider), LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_FavoritesViewModel, ((Provider) favoritesViewModelProvider), LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_VideoFeedViewModel, ((Provider) videoFeedViewModelProvider)));
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(ImmutableMap.<String, javax.inject.Provider<ViewModel>>builderWithExpectedSize(13).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_DuplicateCleanerViewModel, ((Provider) duplicateCleanerViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_ExploreViewModel, ((Provider) exploreViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_FavoritesViewModel, ((Provider) favoritesViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_HighlightReelsViewModel, ((Provider) highlightReelsViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_JournalViewModel, ((Provider) journalViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_MemoryMapViewModel, ((Provider) memoryMapViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_MoodFeedViewModel, ((Provider) moodFeedViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_NearbySharingViewModel, ((Provider) nearbySharingViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_PeopleAlbumsViewModel, ((Provider) peopleAlbumsViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_PhotoFeedViewModel, ((Provider) photoFeedViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_TimeCapsuleViewModel, ((Provider) timeCapsuleViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_VideoFeedViewModel, ((Provider) videoFeedViewModelProvider)).put(LazyClassKeyProvider.com_example_memoreels_ui_viewmodel_VoiceNoteViewModel, ((Provider) voiceNoteViewModelProvider)).build());
     }
 
     @Override
@@ -480,20 +615,70 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_example_memoreels_ui_viewmodel_FavoritesViewModel = "com.example.memoreels.ui.viewmodel.FavoritesViewModel";
+      static String com_example_memoreels_ui_viewmodel_PhotoFeedViewModel = "com.example.memoreels.ui.viewmodel.PhotoFeedViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_PeopleAlbumsViewModel = "com.example.memoreels.ui.viewmodel.PeopleAlbumsViewModel";
 
       static String com_example_memoreels_ui_viewmodel_VideoFeedViewModel = "com.example.memoreels.ui.viewmodel.VideoFeedViewModel";
 
+      static String com_example_memoreels_ui_viewmodel_DuplicateCleanerViewModel = "com.example.memoreels.ui.viewmodel.DuplicateCleanerViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_MemoryMapViewModel = "com.example.memoreels.ui.viewmodel.MemoryMapViewModel";
+
       static String com_example_memoreels_ui_viewmodel_ExploreViewModel = "com.example.memoreels.ui.viewmodel.ExploreViewModel";
 
+      static String com_example_memoreels_ui_viewmodel_TimeCapsuleViewModel = "com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_VoiceNoteViewModel = "com.example.memoreels.ui.viewmodel.VoiceNoteViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_MoodFeedViewModel = "com.example.memoreels.ui.viewmodel.MoodFeedViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_FavoritesViewModel = "com.example.memoreels.ui.viewmodel.FavoritesViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_HighlightReelsViewModel = "com.example.memoreels.ui.viewmodel.HighlightReelsViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_JournalViewModel = "com.example.memoreels.ui.viewmodel.JournalViewModel";
+
+      static String com_example_memoreels_ui_viewmodel_NearbySharingViewModel = "com.example.memoreels.ui.viewmodel.NearbySharingViewModel";
+
       @KeepFieldType
-      FavoritesViewModel com_example_memoreels_ui_viewmodel_FavoritesViewModel2;
+      PhotoFeedViewModel com_example_memoreels_ui_viewmodel_PhotoFeedViewModel2;
+
+      @KeepFieldType
+      PeopleAlbumsViewModel com_example_memoreels_ui_viewmodel_PeopleAlbumsViewModel2;
 
       @KeepFieldType
       VideoFeedViewModel com_example_memoreels_ui_viewmodel_VideoFeedViewModel2;
 
       @KeepFieldType
+      DuplicateCleanerViewModel com_example_memoreels_ui_viewmodel_DuplicateCleanerViewModel2;
+
+      @KeepFieldType
+      MemoryMapViewModel com_example_memoreels_ui_viewmodel_MemoryMapViewModel2;
+
+      @KeepFieldType
       ExploreViewModel com_example_memoreels_ui_viewmodel_ExploreViewModel2;
+
+      @KeepFieldType
+      TimeCapsuleViewModel com_example_memoreels_ui_viewmodel_TimeCapsuleViewModel2;
+
+      @KeepFieldType
+      VoiceNoteViewModel com_example_memoreels_ui_viewmodel_VoiceNoteViewModel2;
+
+      @KeepFieldType
+      MoodFeedViewModel com_example_memoreels_ui_viewmodel_MoodFeedViewModel2;
+
+      @KeepFieldType
+      FavoritesViewModel com_example_memoreels_ui_viewmodel_FavoritesViewModel2;
+
+      @KeepFieldType
+      HighlightReelsViewModel com_example_memoreels_ui_viewmodel_HighlightReelsViewModel2;
+
+      @KeepFieldType
+      JournalViewModel com_example_memoreels_ui_viewmodel_JournalViewModel2;
+
+      @KeepFieldType
+      NearbySharingViewModel com_example_memoreels_ui_viewmodel_NearbySharingViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -517,14 +702,44 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
       @Override
       public T get() {
         switch (id) {
-          case 0: // com.example.memoreels.ui.viewmodel.ExploreViewModel 
-          return (T) new ExploreViewModel(singletonCImpl.provideVideoRepositoryProvider.get(), singletonCImpl.provideVideoTagDaoProvider.get(), singletonCImpl.videoTaggerProvider.get());
+          case 0: // com.example.memoreels.ui.viewmodel.DuplicateCleanerViewModel 
+          return (T) new DuplicateCleanerViewModel(singletonCImpl.provideMediaHashDaoProvider.get(), singletonCImpl.photoDataSourceProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 1: // com.example.memoreels.ui.viewmodel.FavoritesViewModel 
+          case 1: // com.example.memoreels.ui.viewmodel.ExploreViewModel 
+          return (T) new ExploreViewModel(singletonCImpl.provideVideoRepositoryProvider.get(), singletonCImpl.provideVideoTagDaoProvider.get(), singletonCImpl.videoTaggerProvider.get(), singletonCImpl.photoTaggerProvider.get());
+
+          case 2: // com.example.memoreels.ui.viewmodel.FavoritesViewModel 
           return (T) new FavoritesViewModel(singletonCImpl.provideVideoRepositoryProvider.get());
 
-          case 2: // com.example.memoreels.ui.viewmodel.VideoFeedViewModel 
-          return (T) new VideoFeedViewModel(viewModelCImpl.getVideosUseCase(), viewModelCImpl.toggleFavoriteUseCase(), singletonCImpl.provideVideoRepositoryProvider.get(), viewModelCImpl.getThisDayVideosUseCase(), singletonCImpl.videoTaggerProvider.get());
+          case 3: // com.example.memoreels.ui.viewmodel.HighlightReelsViewModel 
+          return (T) new HighlightReelsViewModel(singletonCImpl.photoDataSourceProvider.get(), singletonCImpl.provideVideoTagDaoProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 4: // com.example.memoreels.ui.viewmodel.JournalViewModel 
+          return (T) new JournalViewModel(singletonCImpl.provideJournalDaoProvider.get(), singletonCImpl.photoDataSourceProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 5: // com.example.memoreels.ui.viewmodel.MemoryMapViewModel 
+          return (T) new MemoryMapViewModel(singletonCImpl.provideMediaLocationDaoProvider.get(), singletonCImpl.photoDataSourceProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 6: // com.example.memoreels.ui.viewmodel.MoodFeedViewModel 
+          return (T) new MoodFeedViewModel(singletonCImpl.provideVideoTagDaoProvider.get());
+
+          case 7: // com.example.memoreels.ui.viewmodel.NearbySharingViewModel 
+          return (T) new NearbySharingViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 8: // com.example.memoreels.ui.viewmodel.PeopleAlbumsViewModel 
+          return (T) new PeopleAlbumsViewModel(singletonCImpl.provideFaceClusterDaoProvider.get(), singletonCImpl.photoDataSourceProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 9: // com.example.memoreels.ui.viewmodel.PhotoFeedViewModel 
+          return (T) new PhotoFeedViewModel(singletonCImpl.photoDataSourceProvider.get(), singletonCImpl.feedItemFactoryProvider.get());
+
+          case 10: // com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel 
+          return (T) new TimeCapsuleViewModel(singletonCImpl.provideTimeCapsuleDaoProvider.get());
+
+          case 11: // com.example.memoreels.ui.viewmodel.VideoFeedViewModel 
+          return (T) new VideoFeedViewModel(viewModelCImpl.getVideosUseCase(), viewModelCImpl.toggleFavoriteUseCase(), singletonCImpl.provideVideoRepositoryProvider.get(), viewModelCImpl.getThisDayVideosUseCase(), singletonCImpl.videoTaggerProvider.get(), singletonCImpl.photoTaggerProvider.get(), singletonCImpl.photoDataSourceProvider.get(), singletonCImpl.feedItemFactoryProvider.get(), singletonCImpl.provideVideoTagDaoProvider.get(), singletonCImpl.userPreferencesProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 12: // com.example.memoreels.ui.viewmodel.VoiceNoteViewModel 
+          return (T) new VoiceNoteViewModel(singletonCImpl.provideVoiceNoteDaoProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }
@@ -606,9 +821,21 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     private final SingletonCImpl singletonCImpl = this;
 
-    private Provider<VideoPagingSourceFactory> provideVideoPagingSourceFactoryProvider;
-
     private Provider<AppDatabase> provideAppDatabaseProvider;
+
+    private Provider<VideoTagDao> provideVideoTagDaoProvider;
+
+    private Provider<DailyMemoryWorker_AssistedFactory> dailyMemoryWorker_AssistedFactoryProvider;
+
+    private Provider<DataStore<Preferences>> provideDataStoreProvider;
+
+    private Provider<UserPreferences> userPreferencesProvider;
+
+    private Provider<MediaHashDao> provideMediaHashDaoProvider;
+
+    private Provider<PhotoDataSource> photoDataSourceProvider;
+
+    private Provider<VideoPagingSourceFactory> provideVideoPagingSourceFactoryProvider;
 
     private Provider<FavoritesDao> provideFavoritesDaoProvider;
 
@@ -616,9 +843,21 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     private Provider<VideoRepository> provideVideoRepositoryProvider;
 
-    private Provider<VideoTagDao> provideVideoTagDaoProvider;
-
     private Provider<VideoTagger> videoTaggerProvider;
+
+    private Provider<PhotoTagger> photoTaggerProvider;
+
+    private Provider<JournalDao> provideJournalDaoProvider;
+
+    private Provider<MediaLocationDao> provideMediaLocationDaoProvider;
+
+    private Provider<FaceClusterDao> provideFaceClusterDaoProvider;
+
+    private Provider<FeedItemFactory> feedItemFactoryProvider;
+
+    private Provider<TimeCapsuleDao> provideTimeCapsuleDaoProvider;
+
+    private Provider<VoiceNoteDao> provideVoiceNoteDaoProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -626,19 +865,41 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
 
     }
 
+    private Map<String, javax.inject.Provider<WorkerAssistedFactory<? extends ListenableWorker>>> mapOfStringAndProviderOfWorkerAssistedFactoryOf(
+        ) {
+      return ImmutableMap.<String, javax.inject.Provider<WorkerAssistedFactory<? extends ListenableWorker>>>of("com.example.memoreels.widget.DailyMemoryWorker", ((Provider) dailyMemoryWorker_AssistedFactoryProvider));
+    }
+
+    private HiltWorkerFactory hiltWorkerFactory() {
+      return WorkerFactoryModule_ProvideFactoryFactory.provideFactory(mapOfStringAndProviderOfWorkerAssistedFactoryOf());
+    }
+
     @SuppressWarnings("unchecked")
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
-      this.provideVideoPagingSourceFactoryProvider = DoubleCheck.provider(new SwitchingProvider<VideoPagingSourceFactory>(singletonCImpl, 2));
-      this.provideAppDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<AppDatabase>(singletonCImpl, 4));
-      this.provideFavoritesDaoProvider = DoubleCheck.provider(new SwitchingProvider<FavoritesDao>(singletonCImpl, 3));
-      this.videoRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<VideoRepositoryImpl>(singletonCImpl, 1));
-      this.provideVideoRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<VideoRepository>(singletonCImpl, 0));
-      this.provideVideoTagDaoProvider = DoubleCheck.provider(new SwitchingProvider<VideoTagDao>(singletonCImpl, 5));
-      this.videoTaggerProvider = DoubleCheck.provider(new SwitchingProvider<VideoTagger>(singletonCImpl, 6));
+      this.provideAppDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<AppDatabase>(singletonCImpl, 2));
+      this.provideVideoTagDaoProvider = DoubleCheck.provider(new SwitchingProvider<VideoTagDao>(singletonCImpl, 1));
+      this.dailyMemoryWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<DailyMemoryWorker_AssistedFactory>(singletonCImpl, 0));
+      this.provideDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<DataStore<Preferences>>(singletonCImpl, 4));
+      this.userPreferencesProvider = DoubleCheck.provider(new SwitchingProvider<UserPreferences>(singletonCImpl, 3));
+      this.provideMediaHashDaoProvider = DoubleCheck.provider(new SwitchingProvider<MediaHashDao>(singletonCImpl, 5));
+      this.photoDataSourceProvider = DoubleCheck.provider(new SwitchingProvider<PhotoDataSource>(singletonCImpl, 6));
+      this.provideVideoPagingSourceFactoryProvider = DoubleCheck.provider(new SwitchingProvider<VideoPagingSourceFactory>(singletonCImpl, 9));
+      this.provideFavoritesDaoProvider = DoubleCheck.provider(new SwitchingProvider<FavoritesDao>(singletonCImpl, 10));
+      this.videoRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<VideoRepositoryImpl>(singletonCImpl, 8));
+      this.provideVideoRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<VideoRepository>(singletonCImpl, 7));
+      this.videoTaggerProvider = DoubleCheck.provider(new SwitchingProvider<VideoTagger>(singletonCImpl, 11));
+      this.photoTaggerProvider = DoubleCheck.provider(new SwitchingProvider<PhotoTagger>(singletonCImpl, 12));
+      this.provideJournalDaoProvider = DoubleCheck.provider(new SwitchingProvider<JournalDao>(singletonCImpl, 13));
+      this.provideMediaLocationDaoProvider = DoubleCheck.provider(new SwitchingProvider<MediaLocationDao>(singletonCImpl, 14));
+      this.provideFaceClusterDaoProvider = DoubleCheck.provider(new SwitchingProvider<FaceClusterDao>(singletonCImpl, 15));
+      this.feedItemFactoryProvider = DoubleCheck.provider(new SwitchingProvider<FeedItemFactory>(singletonCImpl, 16));
+      this.provideTimeCapsuleDaoProvider = DoubleCheck.provider(new SwitchingProvider<TimeCapsuleDao>(singletonCImpl, 17));
+      this.provideVoiceNoteDaoProvider = DoubleCheck.provider(new SwitchingProvider<VoiceNoteDao>(singletonCImpl, 18));
     }
 
     @Override
     public void injectMemoReelsApplication(MemoReelsApplication memoReelsApplication) {
+      injectMemoReelsApplication2(memoReelsApplication);
     }
 
     @Override
@@ -656,6 +917,11 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
       return new ServiceCBuilder(singletonCImpl);
     }
 
+    private MemoReelsApplication injectMemoReelsApplication2(MemoReelsApplication instance) {
+      MemoReelsApplication_MembersInjector.injectWorkerFactory(instance, hiltWorkerFactory());
+      return instance;
+    }
+
     private static final class SwitchingProvider<T> implements Provider<T> {
       private final SingletonCImpl singletonCImpl;
 
@@ -670,26 +936,67 @@ public final class DaggerMemoReelsApplication_HiltComponents_SingletonC {
       @Override
       public T get() {
         switch (id) {
-          case 0: // com.example.memoreels.domain.repository.VideoRepository 
-          return (T) AppModule_ProvideVideoRepositoryFactory.provideVideoRepository(singletonCImpl.videoRepositoryImplProvider.get());
+          case 0: // com.example.memoreels.widget.DailyMemoryWorker_AssistedFactory 
+          return (T) new DailyMemoryWorker_AssistedFactory() {
+            @Override
+            public DailyMemoryWorker create(Context context, WorkerParameters params) {
+              return new DailyMemoryWorker(context, params, singletonCImpl.provideVideoTagDaoProvider.get());
+            }
+          };
 
-          case 1: // com.example.memoreels.data.repository.VideoRepositoryImpl 
-          return (T) new VideoRepositoryImpl(singletonCImpl.provideVideoPagingSourceFactoryProvider.get(), singletonCImpl.provideFavoritesDaoProvider.get());
-
-          case 2: // com.example.memoreels.data.datasource.VideoPagingSourceFactory 
-          return (T) AppModule_ProvideVideoPagingSourceFactoryFactory.provideVideoPagingSourceFactory(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
-
-          case 3: // com.example.memoreels.data.local.FavoritesDao 
-          return (T) AppModule_ProvideFavoritesDaoFactory.provideFavoritesDao(singletonCImpl.provideAppDatabaseProvider.get());
-
-          case 4: // com.example.memoreels.data.local.AppDatabase 
-          return (T) AppModule_ProvideAppDatabaseFactory.provideAppDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
-
-          case 5: // com.example.memoreels.data.local.VideoTagDao 
+          case 1: // com.example.memoreels.data.local.VideoTagDao 
           return (T) AppModule_ProvideVideoTagDaoFactory.provideVideoTagDao(singletonCImpl.provideAppDatabaseProvider.get());
 
-          case 6: // com.example.memoreels.data.ml.VideoTagger 
+          case 2: // com.example.memoreels.data.local.AppDatabase 
+          return (T) AppModule_ProvideAppDatabaseFactory.provideAppDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 3: // com.example.memoreels.data.preferences.UserPreferences 
+          return (T) new UserPreferences(singletonCImpl.provideDataStoreProvider.get());
+
+          case 4: // androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> 
+          return (T) AppModule_ProvideDataStoreFactory.provideDataStore(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 5: // com.example.memoreels.data.local.MediaHashDao 
+          return (T) AppModule_ProvideMediaHashDaoFactory.provideMediaHashDao(singletonCImpl.provideAppDatabaseProvider.get());
+
+          case 6: // com.example.memoreels.data.datasource.PhotoDataSource 
+          return (T) new PhotoDataSource(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 7: // com.example.memoreels.domain.repository.VideoRepository 
+          return (T) AppModule_ProvideVideoRepositoryFactory.provideVideoRepository(singletonCImpl.videoRepositoryImplProvider.get());
+
+          case 8: // com.example.memoreels.data.repository.VideoRepositoryImpl 
+          return (T) new VideoRepositoryImpl(singletonCImpl.provideVideoPagingSourceFactoryProvider.get(), singletonCImpl.provideFavoritesDaoProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 9: // com.example.memoreels.data.datasource.VideoPagingSourceFactory 
+          return (T) AppModule_ProvideVideoPagingSourceFactoryFactory.provideVideoPagingSourceFactory(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 10: // com.example.memoreels.data.local.FavoritesDao 
+          return (T) AppModule_ProvideFavoritesDaoFactory.provideFavoritesDao(singletonCImpl.provideAppDatabaseProvider.get());
+
+          case 11: // com.example.memoreels.data.ml.VideoTagger 
           return (T) new VideoTagger(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideVideoTagDaoProvider.get());
+
+          case 12: // com.example.memoreels.data.ml.PhotoTagger 
+          return (T) new PhotoTagger(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideVideoTagDaoProvider.get(), singletonCImpl.photoDataSourceProvider.get());
+
+          case 13: // com.example.memoreels.data.local.JournalDao 
+          return (T) AppModule_ProvideJournalDaoFactory.provideJournalDao(singletonCImpl.provideAppDatabaseProvider.get());
+
+          case 14: // com.example.memoreels.data.local.MediaLocationDao 
+          return (T) AppModule_ProvideMediaLocationDaoFactory.provideMediaLocationDao(singletonCImpl.provideAppDatabaseProvider.get());
+
+          case 15: // com.example.memoreels.data.local.FaceClusterDao 
+          return (T) AppModule_ProvideFaceClusterDaoFactory.provideFaceClusterDao(singletonCImpl.provideAppDatabaseProvider.get());
+
+          case 16: // com.example.memoreels.data.datasource.FeedItemFactory 
+          return (T) new FeedItemFactory();
+
+          case 17: // com.example.memoreels.data.local.TimeCapsuleDao 
+          return (T) AppModule_ProvideTimeCapsuleDaoFactory.provideTimeCapsuleDao(singletonCImpl.provideAppDatabaseProvider.get());
+
+          case 18: // com.example.memoreels.data.local.VoiceNoteDao 
+          return (T) AppModule_ProvideVoiceNoteDaoFactory.provideVoiceNoteDao(singletonCImpl.provideAppDatabaseProvider.get());
 
           default: throw new AssertionError(id);
         }

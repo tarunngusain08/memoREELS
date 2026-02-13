@@ -1,14 +1,17 @@
 package com.example.memoreels.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.memoreels.data.local.VideoTagDao
+import com.example.memoreels.data.ml.PhotoTagger
 import com.example.memoreels.data.ml.TaggingProgress
 import com.example.memoreels.data.ml.VideoTagger
 import com.example.memoreels.domain.model.Video
 import com.example.memoreels.domain.repository.VideoRepository
+import com.example.memoreels.ui.components.MemoryOfMoment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -36,8 +40,13 @@ data class VideoCollection(
 class ExploreViewModel @Inject constructor(
     private val repository: VideoRepository,
     private val videoTagDao: VideoTagDao,
-    private val videoTagger: VideoTagger
+    private val videoTagger: VideoTagger,
+    private val photoTagger: PhotoTagger
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ExploreViewModel"
+    }
 
     // --- Collections (shuffled on each ViewModel creation) ---
 
@@ -53,23 +62,53 @@ class ExploreViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // --- Video of the Day ---
+    // --- Memory of the Moment (replaces Video of the Day) ---
 
-    private val _videoOfTheDay = MutableStateFlow<String?>(null)
-    val videoOfTheDay: StateFlow<String?> = _videoOfTheDay.asStateFlow()
+    private val _memoryOfMoment = MutableStateFlow<MemoryOfMoment?>(null)
+    val memoryOfMoment: StateFlow<MemoryOfMoment?> = _memoryOfMoment.asStateFlow()
+
+    private val _memoryDismissed = MutableStateFlow(false)
+    val memoryDismissed: StateFlow<Boolean> = _memoryDismissed.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val allUris = videoTagDao.getProcessedUris()
-            if (allUris.isNotEmpty()) {
-                _videoOfTheDay.value = allUris.random()
+            try {
+                val allUris = videoTagDao.getProcessedUris()
+                val uri = allUris.randomOrNull() ?: return@launch
+                val isVideo = uri.contains("/video/")
+                val topTag = videoTagDao.getTagsForVideo(uri)
+                    .maxByOrNull { it.confidence }?.tag
+                _memoryOfMoment.value = MemoryOfMoment(
+                    uri = uri,
+                    isVideo = isVideo,
+                    tag = topTag
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pick memory of the moment", e)
             }
         }
     }
 
-    // --- Tagging progress ---
+    fun dismissMemory() {
+        _memoryDismissed.value = true
+    }
 
-    val taggingProgress: StateFlow<TaggingProgress?> = videoTagger.progress
+    // --- Combined tagging progress (video + photo) ---
+
+    val taggingProgress: StateFlow<TaggingProgress?> = combine(
+        videoTagger.progress,
+        photoTagger.progress
+    ) { videoProgress, photoProgress ->
+        when {
+            videoProgress != null && photoProgress != null -> TaggingProgress(
+                processed = videoProgress.processed + photoProgress.processed,
+                total = videoProgress.total + photoProgress.total
+            )
+            videoProgress != null -> videoProgress
+            photoProgress != null -> photoProgress
+            else -> null
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     // --- Search ---
 

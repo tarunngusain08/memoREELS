@@ -1,10 +1,22 @@
 package com.example.memoreels;
 
+import androidx.hilt.work.HiltWrapper_WorkerFactoryModule;
 import com.example.memoreels.di.AppModule;
 import com.example.memoreels.ui.MainActivity_GeneratedInjector;
+import com.example.memoreels.ui.viewmodel.DuplicateCleanerViewModel_HiltModules;
 import com.example.memoreels.ui.viewmodel.ExploreViewModel_HiltModules;
 import com.example.memoreels.ui.viewmodel.FavoritesViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.HighlightReelsViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.JournalViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.MemoryMapViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.MoodFeedViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.NearbySharingViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.PeopleAlbumsViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.PhotoFeedViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.TimeCapsuleViewModel_HiltModules;
 import com.example.memoreels.ui.viewmodel.VideoFeedViewModel_HiltModules;
+import com.example.memoreels.ui.viewmodel.VoiceNoteViewModel_HiltModules;
+import com.example.memoreels.widget.DailyMemoryWorker_HiltModule;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -131,7 +143,9 @@ public final class MemoReelsApplication_HiltComponents {
       modules = {
           AppModule.class,
           ApplicationContextModule.class,
+          DailyMemoryWorker_HiltModule.class,
           HiltWrapper_FragmentGetContextFix_FragmentGetContextFixModule.class,
+          HiltWrapper_WorkerFactoryModule.class,
           ActivityRetainedCBuilderModule.class,
           ServiceCBuilderModule.class
       }
@@ -156,13 +170,23 @@ public final class MemoReelsApplication_HiltComponents {
 
   @Subcomponent(
       modules = {
+          DuplicateCleanerViewModel_HiltModules.KeyModule.class,
           ExploreViewModel_HiltModules.KeyModule.class,
           FavoritesViewModel_HiltModules.KeyModule.class,
+          HighlightReelsViewModel_HiltModules.KeyModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
+          JournalViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
           ViewModelCBuilderModule.class,
-          VideoFeedViewModel_HiltModules.KeyModule.class
+          MemoryMapViewModel_HiltModules.KeyModule.class,
+          MoodFeedViewModel_HiltModules.KeyModule.class,
+          NearbySharingViewModel_HiltModules.KeyModule.class,
+          PeopleAlbumsViewModel_HiltModules.KeyModule.class,
+          PhotoFeedViewModel_HiltModules.KeyModule.class,
+          TimeCapsuleViewModel_HiltModules.KeyModule.class,
+          VideoFeedViewModel_HiltModules.KeyModule.class,
+          VoiceNoteViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -198,10 +222,20 @@ public final class MemoReelsApplication_HiltComponents {
 
   @Subcomponent(
       modules = {
+          DuplicateCleanerViewModel_HiltModules.BindsModule.class,
           ExploreViewModel_HiltModules.BindsModule.class,
           FavoritesViewModel_HiltModules.BindsModule.class,
+          HighlightReelsViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
-          VideoFeedViewModel_HiltModules.BindsModule.class
+          JournalViewModel_HiltModules.BindsModule.class,
+          MemoryMapViewModel_HiltModules.BindsModule.class,
+          MoodFeedViewModel_HiltModules.BindsModule.class,
+          NearbySharingViewModel_HiltModules.BindsModule.class,
+          PeopleAlbumsViewModel_HiltModules.BindsModule.class,
+          PhotoFeedViewModel_HiltModules.BindsModule.class,
+          TimeCapsuleViewModel_HiltModules.BindsModule.class,
+          VideoFeedViewModel_HiltModules.BindsModule.class,
+          VoiceNoteViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

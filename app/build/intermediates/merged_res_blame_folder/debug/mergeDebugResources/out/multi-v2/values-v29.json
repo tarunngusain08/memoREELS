@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.memoreels.app-mergeDebugResources-2:/values-v29/values-v29.xml",
+            "map": [
+                {
+                    "source": "/private/var/folders/yw/2qw_kxv53g794sdl6_w9ytp80000gp/T/cursor-sandbox-cache/62ed3c50308bc6484c74b090b2b111a3/gradle/caches/8.9/transforms/b8cd68ed6b07fabd03b83e8128b5efe6/transformed/glance-appwidget-1.0.0/res/values-v29/values-v29.xml",
+                    "from": {
+                        "startLines": "2,6,10,14,15,16",
+                        "startColumns": "4,4,4,4,4,4",
+                        "startOffsets": "55,247,441,635,724,790",
+                        "endLines": "5,9,13,14,15,16",
+                        "endColumns": "12,12,12,88,65,65",
+                        "endOffsets": "242,436,630,719,785,851"
+                    }
+                }
+            ]
+        }
+    ]
+}

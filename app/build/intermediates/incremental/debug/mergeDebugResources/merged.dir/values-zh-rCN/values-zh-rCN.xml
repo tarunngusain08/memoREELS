@@ -125,6 +125,8 @@
     <string name="exo_track_surround_5_point_1">5.1 环绕声</string>
     <string name="exo_track_surround_7_point_1">7.1 环绕声</string>
     <string name="exo_track_unknown">未知</string>
+    <string msgid="2863935784364843033" name="glance_error_layout_text">"运行 "<b><tt>"adb logcat"</tt></b>" 后搜索 "<b><tt>"GlanceAppWidget"</tt></b>" 可查看确切错误"</string>
+    <string msgid="3631961919234443531" name="glance_error_layout_title"><b>"Glance 应用微件错误"</b></string>
     <string msgid="6827826412747255547" name="in_progress">"进行中"</string>
     <string msgid="7933458017204019916" name="indeterminate">"部分选中"</string>
     <string msgid="2988463736136100848" name="m3c_bottom_sheet_collapse_description">"收起底部动作条"</string>
@@ -184,6 +186,7 @@
     <string msgid="1805687647081129904" name="m3c_tooltip_long_press_label">"显示提示"</string>
     <string msgid="5460405025248574620" name="m3c_tooltip_pane_description">"提示"</string>
     <string msgid="542007171693138492" name="navigation_menu">"导航菜单"</string>
+    <string name="nearby_device_type_tablet">平板电脑</string>
     <string msgid="6610465462668679431" name="not_selected">"未选择"</string>
     <string msgid="875452955155264703" name="off">"已关闭"</string>
     <string msgid="8655164131929253426" name="on">"已开启"</string>

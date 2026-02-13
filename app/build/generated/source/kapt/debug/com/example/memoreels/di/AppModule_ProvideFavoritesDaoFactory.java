@@ -25,23 +25,22 @@ import javax.inject.Provider;
     "cast"
 })
 public final class AppModule_ProvideFavoritesDaoFactory implements Factory<FavoritesDao> {
-  private final Provider<AppDatabase> databaseProvider;
+  private final Provider<AppDatabase> dbProvider;
 
-  public AppModule_ProvideFavoritesDaoFactory(Provider<AppDatabase> databaseProvider) {
-    this.databaseProvider = databaseProvider;
+  public AppModule_ProvideFavoritesDaoFactory(Provider<AppDatabase> dbProvider) {
+    this.dbProvider = dbProvider;
   }
 
   @Override
   public FavoritesDao get() {
-    return provideFavoritesDao(databaseProvider.get());
+    return provideFavoritesDao(dbProvider.get());
   }
 
-  public static AppModule_ProvideFavoritesDaoFactory create(
-      Provider<AppDatabase> databaseProvider) {
-    return new AppModule_ProvideFavoritesDaoFactory(databaseProvider);
+  public static AppModule_ProvideFavoritesDaoFactory create(Provider<AppDatabase> dbProvider) {
+    return new AppModule_ProvideFavoritesDaoFactory(dbProvider);
   }
 
-  public static FavoritesDao provideFavoritesDao(AppDatabase database) {
-    return Preconditions.checkNotNullFromProvides(AppModule.INSTANCE.provideFavoritesDao(database));
+  public static FavoritesDao provideFavoritesDao(AppDatabase db) {
+    return Preconditions.checkNotNullFromProvides(AppModule.INSTANCE.provideFavoritesDao(db));
   }
 }

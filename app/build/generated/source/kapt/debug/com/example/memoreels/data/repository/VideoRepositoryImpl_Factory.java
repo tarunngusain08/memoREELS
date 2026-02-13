@@ -1,5 +1,6 @@
 package com.example.memoreels.data.repository;
 
+import android.content.Context;
 import com.example.memoreels.data.datasource.VideoPagingSourceFactory;
 import com.example.memoreels.data.local.FavoritesDao;
 import dagger.internal.DaggerGenerated;
@@ -10,7 +11,7 @@ import javax.annotation.processing.Generated;
 import javax.inject.Provider;
 
 @ScopeMetadata("javax.inject.Singleton")
-@QualifierMetadata
+@QualifierMetadata("dagger.hilt.android.qualifiers.ApplicationContext")
 @DaggerGenerated
 @Generated(
     value = "dagger.internal.codegen.ComponentProcessor",
@@ -28,26 +29,29 @@ public final class VideoRepositoryImpl_Factory implements Factory<VideoRepositor
 
   private final Provider<FavoritesDao> favoritesDaoProvider;
 
+  private final Provider<Context> contextProvider;
+
   public VideoRepositoryImpl_Factory(
       Provider<VideoPagingSourceFactory> videoPagingSourceFactoryProvider,
-      Provider<FavoritesDao> favoritesDaoProvider) {
+      Provider<FavoritesDao> favoritesDaoProvider, Provider<Context> contextProvider) {
     this.videoPagingSourceFactoryProvider = videoPagingSourceFactoryProvider;
     this.favoritesDaoProvider = favoritesDaoProvider;
+    this.contextProvider = contextProvider;
   }
 
   @Override
   public VideoRepositoryImpl get() {
-    return newInstance(videoPagingSourceFactoryProvider.get(), favoritesDaoProvider.get());
+    return newInstance(videoPagingSourceFactoryProvider.get(), favoritesDaoProvider.get(), contextProvider.get());
   }
 
   public static VideoRepositoryImpl_Factory create(
       Provider<VideoPagingSourceFactory> videoPagingSourceFactoryProvider,
-      Provider<FavoritesDao> favoritesDaoProvider) {
-    return new VideoRepositoryImpl_Factory(videoPagingSourceFactoryProvider, favoritesDaoProvider);
+      Provider<FavoritesDao> favoritesDaoProvider, Provider<Context> contextProvider) {
+    return new VideoRepositoryImpl_Factory(videoPagingSourceFactoryProvider, favoritesDaoProvider, contextProvider);
   }
 
   public static VideoRepositoryImpl newInstance(VideoPagingSourceFactory videoPagingSourceFactory,
-      FavoritesDao favoritesDao) {
-    return new VideoRepositoryImpl(videoPagingSourceFactory, favoritesDao);
+      FavoritesDao favoritesDao, Context context) {
+    return new VideoRepositoryImpl(videoPagingSourceFactory, favoritesDao, context);
   }
 }

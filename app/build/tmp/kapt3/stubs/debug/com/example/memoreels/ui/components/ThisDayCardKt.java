@@ -14,7 +14,7 @@ public final class ThisDayCardKt {
     
     /**
      * A floating card that appears at the top of the main feed
-     * when there are videos from today's date in previous years.
+     * when there are media from today's date in previous years.
      */
     @androidx.compose.runtime.Composable()
     public static final void ThisDayCard(@org.jetbrains.annotations.NotNull()

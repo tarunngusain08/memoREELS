@@ -19,7 +19,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -104,6 +105,21 @@ dependencies {
 
     // ExifInterface for metadata
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+
+    // Glance (Jetpack Compose widgets)
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+    implementation("androidx.glance:glance-material3:1.0.0")
+
+    // WorkManager for background tasks
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // ML Kit Face Detection (for mood/people features)
+    implementation("com.google.mlkit:face-detection:16.1.6")
+
+    // Nearby Connections (peer-to-peer sharing)
+    implementation("com.google.android.gms:play-services-nearby:19.1.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -2,9 +2,11 @@ package com.example.memoreels.data.ml;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.util.Log;
 import com.example.memoreels.data.local.VideoTagDao;
 import com.example.memoreels.data.model.VideoTagEntity;
 import com.google.mlkit.vision.common.InputImage;
@@ -13,7 +15,6 @@ import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
 import dagger.hilt.android.qualifiers.ApplicationContext;
 import kotlinx.coroutines.Dispatchers;
 import kotlinx.coroutines.flow.StateFlow;
-import kotlinx.coroutines.tasks.await;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 

@@ -1,12 +1,15 @@
 package com.example.memoreels.ui.viewmodel;
 
+import android.util.Log;
 import androidx.lifecycle.ViewModel;
 import androidx.paging.PagingData;
 import com.example.memoreels.data.local.VideoTagDao;
+import com.example.memoreels.data.ml.PhotoTagger;
 import com.example.memoreels.data.ml.TaggingProgress;
 import com.example.memoreels.data.ml.VideoTagger;
 import com.example.memoreels.domain.model.Video;
 import com.example.memoreels.domain.repository.VideoRepository;
+import com.example.memoreels.ui.components.MemoryOfMoment;
 import dagger.hilt.android.lifecycle.HiltViewModel;
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
 import kotlinx.coroutines.FlowPreview;

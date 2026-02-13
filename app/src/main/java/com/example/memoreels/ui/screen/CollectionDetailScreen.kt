@@ -33,12 +33,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.memoreels.ui.components.VideoThumbnail
+import com.example.memoreels.ui.components.MediaThumbnail
 import com.example.memoreels.ui.viewmodel.ExploreViewModel
 
 /**
- * Shows all videos tagged with a specific AI label as a grid.
- * Tapping a video opens the collection feed at that video's index.
+ * Shows all media tagged with a specific AI label as a grid.
+ * Tapping an item opens the collection feed at that index.
  */
 @Composable
 fun CollectionDetailScreen(
@@ -76,7 +76,7 @@ fun CollectionDetailScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${videoUris.size} ${if (videoUris.size == 1) "video" else "videos"}",
+                    text = "${videoUris.size} ${if (videoUris.size == 1) "item" else "items"}",
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 13.sp
                 )
@@ -91,7 +91,7 @@ fun CollectionDetailScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No videos in this collection yet",
+                    text = "No items in this collection yet",
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center,
@@ -107,8 +107,8 @@ fun CollectionDetailScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 itemsIndexed(videoUris) { index, uri ->
-                    CollectionVideoItem(
-                        videoUri = uri,
+                    CollectionMediaItem(
+                        mediaUri = uri,
                         onClick = { onVideoClick(index) }
                     )
                 }
@@ -118,10 +118,12 @@ fun CollectionDetailScreen(
 }
 
 @Composable
-private fun CollectionVideoItem(
-    videoUri: String,
+private fun CollectionMediaItem(
+    mediaUri: String,
     onClick: () -> Unit
 ) {
+    val isVideo = mediaUri.contains("/video/")
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -130,22 +132,24 @@ private fun CollectionVideoItem(
             .background(Color.DarkGray)
             .clickable(onClick = onClick)
     ) {
-        VideoThumbnail(
-            contentUri = videoUri,
+        MediaThumbnail(
+            contentUri = mediaUri,
             contentDescription = null,
             modifier = Modifier.fillMaxSize()
         )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = Color.White
-            )
+        if (isVideo) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
         }
     }
 }
